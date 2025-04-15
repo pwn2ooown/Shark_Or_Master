@@ -1100,7 +1100,7 @@ const PokerGame = () => {
 
                 <div className="community-section">
                     <div className="community-cards">
-                        <h2>Community Cards</h2>
+                        <h2>Board</h2>
                         <div className="card-container">
                             {communityCards.slice(0, revealedCommunityCards).map((card, index) => {
                                 const actualIndex = index + 2; // Add offset for player cards

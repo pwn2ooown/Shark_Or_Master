@@ -44,7 +44,7 @@ For entertainment purposes only.
 
 All money and bets in this game are virtual and have no real-world value.
 
-Please gamble responsibly.
+Please play responsibly.
 
 The copyright of original game is owned by WPT Global and I don't own any rights to it.
 
@@ -52,6 +52,6 @@ The copyright of original game is owned by WPT Global and I don't own any rights
 
 本遊戲中的所有金錢與投注皆並無任何現實世界的價值。
 
-請理性賭博。
+請理性遊玩。
 
-永支大泓老師的鯊魚大師環節
+**永遠支持大泓老師的鯊魚大師環節**
