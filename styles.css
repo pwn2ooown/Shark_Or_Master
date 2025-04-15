@@ -135,8 +135,6 @@ body {
     position: relative;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     transform-style: preserve-3d;
-    transition: none; /* Remove all transitions */
-    transform: none !important; /* Ensure no transforms are applied */
 }
 
 .card.hearts, .card.diamonds {
@@ -237,14 +235,6 @@ body {
     transform: none !important; /* Prevent any transformations */
     position: relative;
     z-index: 5;
-}
-
-.unused-card {
-    opacity: 0.4;
-    filter: grayscale(80%);
-    transform: none !important;
-    transition: opacity 0.5s ease;
-    box-shadow: none;
 }
 
 .greyed-card {
@@ -451,17 +441,6 @@ body {
     box-shadow: none;
 }
 
-.betting-box button {
-    background-color: #ffc107;
-    color: #333;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-top: 10px;
-    font-weight: bold;
-}
-
 .start-game {
     background-color: #ff4081;
     color: white;
@@ -533,44 +512,6 @@ body {
     justify-content: center;
     gap: 6px; /* Reduced from 8px */
     margin-top: 3px; /* Reduced from 5px */
-}
-
-.odds {
-    text-align: center;
-    font-size: 18px;
-    margin-bottom: 20px;
-}
-
-.player-info {
-    text-align: center;
-    margin-bottom: 20px;
-    font-size: 20px;
-}
-
-.winner-highlight {
-    box-shadow: 0 0 15px gold;
-    animation: pulsate 1.5s infinite alternate;
-}
-
-@keyframes pulsate {
-    0% { box-shadow: 0 0 15px gold; }
-    100% { box-shadow: 0 0 25px gold; }
-}
-
-input {
-    padding: 10px;
-    width: 100%;
-    margin-top: 10px;
-    border-radius: 5px;
-    border: none;
-}
-
-.red {
-    color: #ff5252;
-}
-
-.green {
-    color: #4caf50;
 }
 
 .side-bets {
@@ -729,97 +670,6 @@ input {
     0% { opacity: 0.5; }
     50% { opacity: 1; }
     100% { opacity: 0.5; }
-}
-
-.final-card {
-    width: 200px;
-    height: 300px;
-    font-size: 48px;
-    line-height: 300px;
-    cursor: pointer; /* Change to pointer to indicate clickability */
-    transform-style: preserve-3d;
-    position: relative;
-    transition: transform 0.1s ease-out;
-    touch-action: pan-y; /* Prevent default horizontal swiping behaviors */
-    will-change: transform; /* Optimize for animation */
-}
-
-/* Add a subtle hover effect to indicate clickability */
-.final-card:hover:not(.flipped) {
-    box-shadow: 0 0 40px rgba(255, 215, 0, 0.4);
-}
-
-.final-card .big-final-card {
-    width: 100%;
-    height: 100%;
-    font-size: 72px;
-    line-height: 300px;
-}
-
-.final-card-front, .final-card-back {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    backface-visibility: hidden;
-    border-radius: 15px;
-    box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    touch-action: none; /* Prevent any touch actions that might interfere */
-}
-
-.final-card-front {
-    background: #1a1a1a;
-    transform: rotateY(180deg);
-}
-
-.final-card-back {
-    background-color: white;
-    color: transparent; /* Hide the ? character */
-    background-image: url('static/cardback.png');
-    background-size: cover;
-    background-position: center;
-    /* Always visible, even if not flipped */
-}
-
-.final-card.flipped {
-    transform: rotateY(180deg) !important;
-    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.winning-card {
-    box-shadow: 0 0 15px #ffeb3b;
-    border: 2px solid #ffeb3b;
-    animation: glowOnly 1.5s infinite alternate;
-    transform: none !important; /* Prevent any transformations */
-    position: relative;
-    z-index: 5;
-}
-
-.unused-card {
-    opacity: 0.4;
-    filter: grayscale(80%);
-    transform: none !important;
-    transition: opacity 0.5s ease;
-    box-shadow: none;
-}
-
-.greyed-card {
-    opacity: 0.4 !important;
-    filter: grayscale(80%) !important;
-    box-shadow: none !important;
-    border: none !important;
-    z-index: 1 !important;
-}
-
-@keyframes glowOnly {
-    0% { 
-        box-shadow: 0 0 15px #ffeb3b;
-    }
-    100% { 
-        box-shadow: 0 0 25px #ffeb3b;
-    }
 }
 
 .game-layout {

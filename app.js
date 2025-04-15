@@ -23,6 +23,21 @@ const shuffleDeck = (deck) => {
     return newDeck;
 };
 
+// Helper to check if payoutMultiplier is less than 1.4 for either side
+const isDuplicateHand = (hand1, hand2) => {
+    const values1 = hand1.map(card => card.value).sort();
+    const values2 = hand2.map(card => card.value).sort();
+    return values1[0] === values2[0] || values1[1] === values2[1];
+};
+
+// Helper to check if payoutMultiplier is less than 1.4 for either side
+const isLowPayout = (odds) => {
+    const masterPayout = odds.masterWinProbability > 0 ? 1 / odds.masterWinProbability : Infinity;
+    const sharkPayout = odds.sharkWinProbability > 0 ? 1 / odds.sharkWinProbability : Infinity;
+    // console.log(odds);
+    return masterPayout < 1.4 || sharkPayout < 1.4;
+};
+
 // Card display component
 const Card = ({ card, hidden, className = "", highlight = false, greyed = false }) => {
     if (hidden) {
@@ -298,10 +313,6 @@ const simulateWinProbability = (masterCards, sharkCards, communityCards, iterati
     };
 };
 
-const formatPercentage = (value) => {
-    return (value * 100).toFixed(2) + '%';
-};
-
 // QuickBetButton component
 const QuickBetButton = ({ value, playerMoney, onClick, className = "", isSelected, disabled }) => {
     const isDisabled = disabled || value > playerMoney;
@@ -372,7 +383,6 @@ const PokerGame = () => {
     const [currentY, setCurrentY] = React.useState(0);
     const [autoRevealTimer, setAutoRevealTimer] = React.useState(null);
     const [selectedBetButton, setSelectedBetButton] = React.useState(null);
-    const [startX, setStartX] = React.useState(null);
     const [showHistoryPopup, setShowHistoryPopup] = React.useState(false);
     const [winningCardIndices, setWinningCardIndices] = React.useState([]);
     const [playerWon, setPlayerWon] = React.useState(false);
@@ -440,21 +450,6 @@ const PokerGame = () => {
         }
     };
 
-    // If any of one card is the same we don't want to
-    const isDuplicateHand = (hand1, hand2) => {
-        const values1 = hand1.map(card => card.value).sort();
-        const values2 = hand2.map(card => card.value).sort();
-        return values1[0] === values2[0] || values1[1] === values2[1];
-    };
-
-    // Helper to check if payoutMultiplier is less than 1.4 for either side
-    const isLowPayout = (odds) => {
-        const masterPayout = odds.masterWinProbability > 0 ? 1 / odds.masterWinProbability : Infinity;
-        const sharkPayout = odds.sharkWinProbability > 0 ? 1 / odds.sharkWinProbability : Infinity;
-        // console.log(odds);
-        return masterPayout < 1.4 || sharkPayout < 1.4;
-    };
-
     const startNewGame = () => {
         let newDeck, newMasterCards, newSharkCards, newCommunityCards, oddsResult, newSideOdds;
         let tries = 0;
@@ -469,8 +464,7 @@ const PokerGame = () => {
             // Prevent infinite loop in rare case (should never happen in practice)
             if (tries > 30){ alert("Cannot find good game"); break;}
         } while (
-            isDuplicateHand(newMasterCards, newSharkCards) ||
-            isLowPayout(oddsResult)
+            isLowPayout(oddsResult) || isDuplicateHand(newMasterCards, newSharkCards)
         );
         setDeck(newDeck);
         setMasterCards(newMasterCards);
@@ -841,33 +835,32 @@ const PokerGame = () => {
         );
         setWinningCardIndices(winningIndices);
         
-        let winAmount = 0;
+        let mainWinAmount = 0;  // Track main bet winnings separately
         let resultText = '';
         let totalWinnings = 0;
-        let hasSideWin = false;
 
         if (result > 0) { // Master wins
             setWinner('master');
             updateWinHistory('master');
             if (playerBet === 'master') {
                 const payoutMultiplier = odds.master > 0 ? (1 / odds.master) : 1;
-                winAmount = Math.floor(masterBet * payoutMultiplier * RAKE);
-                totalWinnings += winAmount;
+                mainWinAmount = Math.floor(masterBet * payoutMultiplier * RAKE);
+                totalWinnings += mainWinAmount;
             }
         } else if (result < 0) { // Shark wins
             setWinner('shark');
             updateWinHistory('shark');
             if (playerBet === 'shark') {
                 const payoutMultiplier = odds.shark > 0 ? (1 / odds.shark) : 1;
-                winAmount = Math.floor(sharkBet * payoutMultiplier * RAKE);
-                totalWinnings += winAmount;
+                mainWinAmount = Math.floor(sharkBet * payoutMultiplier * RAKE);
+                totalWinnings += mainWinAmount;
             }
         } else { // Tie
             setWinner('tie');
             updateWinHistory('tie');
             if (playerBet) {
-                winAmount = masterBet + sharkBet;
-                totalWinnings += winAmount;
+                mainWinAmount = masterBet + sharkBet;
+                totalWinnings += mainWinAmount;
             }
         }
 
@@ -883,15 +876,11 @@ const PokerGame = () => {
                 const sideWinAmount = Math.floor(sideBets[category] * payoutMultiplier * RAKE);
                 sideWinnings[category] = sideWinAmount;
                 totalSideWinnings += sideWinAmount;
-                hasSideWin = true;
             }
         });
 
         setSideWinnings(sideWinnings);
         
-        // Set playerWon to true if either main bet or side bets were won
-        setPlayerWon(totalWinnings + totalSideWinnings > 0);
-
         // Only show numbers if there are winnings
         if (totalWinnings + totalSideWinnings > 0) {
             resultText = `+ $${totalWinnings + totalSideWinnings}`;
@@ -900,19 +889,32 @@ const PokerGame = () => {
         }
 
         // Update player money
-        if (winAmount > 0) {
-            setPlayerMoney(prev => prev + winAmount);
+        if (mainWinAmount > 0) {
+            setPlayerMoney(prev => prev + mainWinAmount);
         }
         if (totalSideWinnings > 0) {
             setPlayerMoney(prev => prev + totalSideWinnings);
         }
         
-        setWinnings(totalWinnings + totalSideWinnings);
+        setWinnings(mainWinAmount); // Store only main bet winnings in winnings state
         setGameResult(resultText);
         setGameState('result');
     };
 
     const findWinningCardIndices = (playerCards, communityCards, handRank) => {
+        // Create a map to track actual card indices
+        const indexMap = new Array(playerCards.length + communityCards.length).fill(-1);
+        
+        // Map player card indices (0, 1)
+        for (let i = 0; i < playerCards.length; i++) {
+            indexMap[i] = i;
+        }
+        
+        // Map community card indices (2, 3, 4, 5, 6)
+        for (let i = 0; i < communityCards.length; i++) {
+            indexMap[i + playerCards.length] = i + playerCards.length;
+        }
+        
         const allCards = [...playerCards, ...communityCards];
         const indices = [];
         
@@ -1014,8 +1016,8 @@ const PokerGame = () => {
                 break;
         }
         
-        // Limit to 5 cards and make sure we include player cards
-        return indices.slice(0, 5);
+        // Map the found indices to their actual positions and limit to 5 cards
+        return indices.map(idx => indexMap[idx]).slice(0, 5);
     };
 
     const findFlushSuit = (cards) => {
@@ -1089,7 +1091,7 @@ const PokerGame = () => {
                             <p className="odds-display">× {odds.master > 0 ? (1 / odds.master).toFixed(2) : 'N/A'}</p>
                         </div>
                     )}
-                    {gameState === 'result' && playerBet === 'master' && winnings > 0 && (
+                    {gameState === 'result' && playerBet === 'master' && winner === 'master' && (
                         <div className="player-bet-info">
                             <p className="winning-amount">+ ${winnings}</p>
                         </div>
@@ -1101,7 +1103,7 @@ const PokerGame = () => {
                         <h2>Community Cards</h2>
                         <div className="card-container">
                             {communityCards.slice(0, revealedCommunityCards).map((card, index) => {
-                                const actualIndex = masterCards.length + index;
+                                const actualIndex = index + 2; // Add offset for player cards
                                 let highlight = false, greyed = false;
                                 if (gameState === 'result') {
                                     highlight = winningCardIndices.includes(actualIndex);
@@ -1162,7 +1164,7 @@ const PokerGame = () => {
                             <p className="odds-display">× {odds.shark > 0 ? (1 / odds.shark).toFixed(2) : 'N/A'}</p>
                         </div>
                     )}
-                    {gameState === 'result' && playerBet === 'shark' && winnings > 0 && (
+                    {gameState === 'result' && playerBet === 'shark' && winner === 'shark' && (
                         <div className="player-bet-info">
                             <p className="winning-amount">+ ${winnings}</p>
                         </div>
@@ -1357,7 +1359,7 @@ const PokerGame = () => {
                                 className="big-final-card"
                             />
                         </div>
-                        <div className="final-card-back" style={{ backgroundImage: `url('static/cardback.png')`, backgroundSize: 'cover' }}>
+                        <div className="final-card-back">
                         </div>
                     </div>
                 </div>
