@@ -24,7 +24,7 @@ const shuffleDeck = (deck) => {
 };
 
 // Card display component
-const Card = ({ card, hidden, className = "" }) => {
+const Card = ({ card, hidden, className = "", unused = false, greyed = false }) => {
     if (hidden) {
         return <div className={`card hidden ${className}`}>?</div>;
     }
@@ -38,7 +38,7 @@ const Card = ({ card, hidden, className = "" }) => {
     else if (card.suit === 'spades') displaySuit = '♠';
     
     return (
-        <div className={`card ${card.suit} ${className}`}>
+        <div className={`card ${card.suit} ${className} ${unused ? 'unused-card' : ''} ${greyed ? 'greyed-card' : ''}`}>
             {displayValue}{displaySuit}
         </div>
     );
@@ -327,6 +327,9 @@ const SIDE_BETS = {
     VERY_HIGH: { name: 'Full House', ranks: [6], odds: 0 },
     PREMIUM: { name: 'Quads/Royal/Straight Flush', ranks: [7, 8, 9], odds: 0 }
 };
+
+// Add rake constant - house takes 5% of winnings
+const RAKE = 0.95;
 
 // Main Game Component
 const PokerGame = () => {
@@ -834,20 +837,20 @@ const PokerGame = () => {
         
         let winAmount = 0;
         let resultText = '';
+        let totalSideWinnings = 0; // Track side bet winnings separately
         
         if (result > 0) { // Master wins
             setWinner('master');
             updateWinHistory('master');
             resultText = `Master wins with ${getHandName(masterRank)}!`;
             if (playerBet === 'master') {
-                // Calculate payout based on "Pay X to 1" odds
-                // If odds are 1.5 to 1, player gets their bet back plus 1.5x their bet
                 const payoutMultiplier = odds.master > 0 ? Math.round((1 / odds.master) * 100) / 100 : 1;
-                winAmount = masterBet * payoutMultiplier;
-                resultText += ` You win $${winAmount}!`;
+                // Apply rake to winnings
+                winAmount = Math.floor(masterBet * payoutMultiplier * RAKE);
+                resultText += ` You win $${winAmount} on main bet! (5% rake applied)`;
                 setPlayerWon(true);
             } else if (playerBet === 'shark') {
-                resultText += ' You lose your bet.';
+                resultText += ' You lose your main bet.';
                 setPlayerWon(false);
             }
         } else if (result < 0) { // Shark wins
@@ -855,13 +858,13 @@ const PokerGame = () => {
             updateWinHistory('shark');
             resultText = `Shark wins with ${getHandName(sharkRank)}!`;
             if (playerBet === 'shark') {
-                // Calculate payout based on "Pay X to 1" odds
                 const payoutMultiplier = odds.shark > 0 ? Math.round((1 / odds.shark) * 100) / 100 : 1;
-                winAmount = sharkBet * payoutMultiplier;
-                resultText += ` You win $${winAmount}!`;
+                // Apply rake to winnings
+                winAmount = Math.floor(sharkBet * payoutMultiplier * RAKE);
+                resultText += ` You win $${winAmount} on main bet! (5% rake applied)`;
                 setPlayerWon(true);
             } else if (playerBet === 'master') {
-                resultText += ' You lose your bet.';
+                resultText += ' You lose your main bet.';
                 setPlayerWon(false);
             }
         } else { // Tie
@@ -875,34 +878,36 @@ const PokerGame = () => {
             }
         }
         
-        if (winAmount > 0) {
-            setPlayerMoney(prevMoney => prevMoney + winAmount);
-            setWinnings(winAmount);
-        }
-        
         // Calculate side bet winnings
         const winningRank = getRank(result > 0 ? masterHand : sharkHand);
         const sideWinnings = {};
-        let totalSideWinnings = 0;
 
         Object.entries(SIDE_BETS).forEach(([category, { ranks }]) => {
             if (ranks.includes(winningRank.rank) && sideBets[category] > 0) {
-                // Calculate side bet payout using the "Pay X to 1" format
                 const payoutMultiplier = sideOdds[category].odds > 0 ? 
                     Math.round((1 / sideOdds[category].odds) * 100) / 100 : 1;
-                
-                // Return the original bet plus the winnings
-                const sideWinAmount = sideBets[category] + (sideBets[category] * payoutMultiplier);
+                // Apply rake to side bet winnings
+                const sideWinAmount = Math.floor(sideBets[category] * payoutMultiplier * RAKE);
                 sideWinnings[category] = sideWinAmount;
                 totalSideWinnings += sideWinAmount;
             }
         });
 
         setSideWinnings(sideWinnings);
+        
+        // Add side bet details to result text if any side bets won
         if (totalSideWinnings > 0) {
+            resultText += ` You also won $${totalSideWinnings} on side bets!`;
             setPlayerMoney(prev => prev + totalSideWinnings);
         }
-
+        
+        // Set total winnings (main bet + side bets)
+        const totalWinnings = winAmount + totalSideWinnings;
+        if (winAmount > 0) {
+            setPlayerMoney(prevMoney => prevMoney + winAmount);
+        }
+        
+        setWinnings(totalWinnings);
         setGameResult(resultText);
         setGameState('result');
     };
@@ -1043,6 +1048,7 @@ const PokerGame = () => {
         <div className="game-container">
             <div className="header">
                 <h1>Shark or Master</h1>
+                <span className="source-note">Source code is at <a href="https://github.com/pwn2ooown/Shark_Or_Master" target="_blank">GitHub</a>. If you have any problems, just open an issue.</span>
             </div>
             
             <div className="game-layout">
@@ -1055,23 +1061,26 @@ const PokerGame = () => {
                         <h2>Master {masterHandName && gameState === 'result' && `(${masterHandName})`}</h2>
                         <div className="player-cards">
                             {masterCards.map((card, index) => {
-                                const isWinningCard = gameState === 'result' && winner === 'master' && 
-                                    winningCardIndices.includes(index);
+                                const isWinningCard = gameState === 'result' && winningCardIndices.includes(index);
+                                const isUnused = gameState === 'result' && !winningCardIndices.includes(index) && winner === 'master';
+                                const isGreyed = gameState === 'result' && winner === 'shark';
                                 return (
                                     <Card 
                                         key={`master-${index}`} 
                                         card={card} 
                                         hidden={!cardsRevealed && gameState !== 'result'} 
                                         className={`card-reveal-animation ${isWinningCard ? 'winning-card' : ''}`}
+                                        unused={isUnused}
+                                        greyed={isGreyed}
                                     />
                                 );
                             })}
                         </div>
                     </div>
-                    {gameState === 'betting' && (
+                    {(gameState === 'betting' || gameState === 'dealing') && (
                         <div className="player-bet-info">
                             <h3>${masterBet}</h3>
-                            <p className="odds-display">Pays {odds.master > 0 ? (1 / odds.master).toFixed(2) : 'N/A'} to 1</p>
+                            <p className="odds-display">× {odds.master > 0 ? (1 / odds.master).toFixed(2) : 'N/A'}</p>
                         </div>
                     )}
                 </div>
@@ -1081,13 +1090,18 @@ const PokerGame = () => {
                         <h2>Community Cards</h2>
                         <div className="card-container">
                             {communityCards.slice(0, revealedCommunityCards).map((card, index) => {
-                                const isWinningCard = gameState === 'result' && winningCardIndices.includes(masterCards.length + index);
+                                const actualIndex = masterCards.length + index;
+                                const isWinningCard = gameState === 'result' && winningCardIndices.includes(actualIndex);
+                                const isUnused = gameState === 'result' && !winningCardIndices.includes(actualIndex);
+                                const isGreyed = gameState === 'result' && winner && !winningCardIndices.includes(actualIndex);
                                 return (
                                     <Card 
                                         key={`community-${index}`} 
                                         card={card} 
                                         hidden={false} 
                                         className={`card-reveal-animation ${isWinningCard ? 'winning-card' : ''}`}
+                                        unused={isUnused}
+                                        greyed={isGreyed}
                                     />
                                 );
                             })}
@@ -1107,23 +1121,26 @@ const PokerGame = () => {
                         <h2>Shark {sharkHandName && gameState === 'result' && `(${sharkHandName})`}</h2>
                         <div className="player-cards">
                             {sharkCards.map((card, index) => {
-                                const isWinningCard = gameState === 'result' && winner === 'shark' && 
-                                    winningCardIndices.includes(index);
+                                const isWinningCard = gameState === 'result' && winner === 'shark' && winningCardIndices.includes(index);
+                                const isUnused = gameState === 'result' && !winningCardIndices.includes(index) && winner === 'shark';
+                                const isGreyed = gameState === 'result' && winner === 'master';
                                 return (
                                     <Card 
                                         key={`shark-${index}`} 
                                         card={card} 
                                         hidden={!cardsRevealed && gameState !== 'result'} 
                                         className={`card-reveal-animation ${isWinningCard ? 'winning-card' : ''}`}
+                                        unused={isUnused}
+                                        greyed={isGreyed}
                                     />
                                 );
                             })}
                         </div>
                     </div>
-                    {gameState === 'betting' && (
+                    {(gameState === 'betting' || gameState === 'dealing') && (
                         <div className="player-bet-info">
                             <h3>${sharkBet}</h3>
-                            <p className="odds-display">Pays {odds.shark > 0 ? (1 / odds.shark).toFixed(2) : 'N/A'} to 1</p>
+                            <p className="odds-display">× {odds.shark > 0 ? (1 / odds.shark).toFixed(2) : 'N/A'}</p>
                         </div>
                     )}
                 </div>
@@ -1142,7 +1159,7 @@ const PokerGame = () => {
                                 >
                                     <h4>{name}</h4>
                                     <p>${sideBets[category]}</p>
-                                    <p>Pays {odds > 0 ? (1 / odds).toFixed(2) : 'N/A'} to 1</p>
+                                    <p>× {odds > 0 ? (1 / odds).toFixed(2) : 'N/A'}</p>
                                     {sideWinnings[category] && (
                                         <p className="green">Won ${sideWinnings[category]}!</p>
                                     )}
@@ -1257,12 +1274,9 @@ const PokerGame = () => {
             <div className="disclaimer-container">
                 <div className="disclaimer">
                     For entertainment purposes only.
-                    <br/>
                     All money and bets in this game are virtual and have no real-world value.
-                    <br/>
                     Please gamble responsibly.
-                    <br/>
-                    <span className="refresh-note">If game stops working, please refresh the page.</span>
+                    <span className="rake-note">A 5% rake is taken from all winnings.</span>
                 </div>
             </div>
             
@@ -1306,7 +1320,7 @@ const PokerGame = () => {
                         onMouseMove={handleMouseMove}
                         onMouseUp={handleMouseUp}
                         onMouseLeave={handleMouseUp}
-                        onClick={handleCardClick} // Add click handler
+                        onClick={handleCardClick}
                         style={{ transform: finalCardFlipped ? 'rotateY(180deg)' : `rotateY(${revealProgress * 1.8}deg)` }}
                     >
                         <div className="final-card-front">

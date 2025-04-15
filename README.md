@@ -2,7 +2,7 @@
 
 Pure frontend implementation of the Poker Master game from WPT Global.
 
-Code by Claude 3.7 and image by Grok3
+Code by Github Copilot (Model: mostly using Claude 3.7) and image by Grok3
 
 ## Disclaimer
 
