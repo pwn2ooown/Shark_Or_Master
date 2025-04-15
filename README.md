@@ -46,6 +46,8 @@ All money and bets in this game are virtual and have no real-world value.
 
 Please gamble responsibly.
 
+The copyright of original game is owned by WPT Global and I don't own any rights to it.
+
 僅供娛樂用途。
 
 本遊戲中的所有金錢與投注皆並無任何現實世界的價值。
