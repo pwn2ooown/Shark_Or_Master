@@ -23,11 +23,11 @@ const shuffleDeck = (deck) => {
     return newDeck;
 };
 
-// Helper to check if payoutMultiplier is less than 1.4 for either side
 const isDuplicateHand = (hand1, hand2) => {
-    const values1 = hand1.map(card => card.value).sort();
-    const values2 = hand2.map(card => card.value).sort();
-    return values1[0] === values2[0] || values1[1] === values2[1];
+    return hand1[0] === hand2[0]
+    || hand1[0] === hand2[1]
+    || hand1[1] === hand2[0]
+    || hand1[1] === hand2[1];
 };
 
 // Helper to check if payoutMultiplier is less than 1.4 for either side
@@ -902,49 +902,24 @@ const PokerGame = () => {
     };
 
     const findWinningCardIndices = (playerCards, communityCards, handRank) => {
-        // Create a map to track actual card indices
-        const indexMap = new Array(playerCards.length + communityCards.length).fill(-1);
-        
-        // Map player card indices (0, 1)
-        for (let i = 0; i < playerCards.length; i++) {
-            indexMap[i] = i;
-        }
-        
-        // Map community card indices (2, 3, 4, 5, 6)
-        for (let i = 0; i < communityCards.length; i++) {
-            indexMap[i + playerCards.length] = i + playerCards.length;
-        }
-        
         const allCards = [...playerCards, ...communityCards];
         const indices = [];
         
-        // Based on hand type, find the cards that form the winning hand
         switch (handRank.rank) {
             case 9: // Royal Flush
             case 8: // Straight Flush 
             case 5: // Flush
                 // Find all cards of the same suit
                 const flushSuit = findFlushSuit(allCards);
-                allCards.forEach((card, index) => {
-                    if (card.suit === flushSuit) {
-                        // For straight flush, check if it's part of the straight
-                        if (handRank.rank === 8 || handRank.rank === 9) {
-                            const cardValue = getCardValue(card.value);
-                            const highCard = handRank.value;
-                            // For 5-high straight (A-5-4-3-2), special case
-                            if (highCard === 5 && card.value === 'A') {
-                                indices.push(index);
-                            } else if (cardValue <= highCard && cardValue > highCard - 5) {
-                                indices.push(index);
-                            }
-                        } else {
-                            // For regular flush, take top 5 cards
-                            const cardValue = getCardValue(card.value);
-                            if (handRank.values.includes(cardValue)) {
-                                indices.push(index);
-                            }
-                        }
-                    }
+                // First get all cards of the matching suit
+                const suitedCards = allCards
+                    .map((card, index) => ({ card, index }))
+                    .filter(item => item.card.suit === flushSuit)
+                    .sort((a, b) => getCardValue(b.card.value) - getCardValue(a.card.value));
+
+                // Take top 5 cards of that suit
+                suitedCards.slice(0, 5).forEach(item => {
+                    indices.push(item.index);
                 });
                 break;
                 
@@ -1016,8 +991,16 @@ const PokerGame = () => {
                 break;
         }
         
-        // Map the found indices to their actual positions and limit to 5 cards
-        return indices.map(idx => indexMap[idx]).slice(0, 5);
+        // Convert indices to their correct positions relative to the hand being checked
+        return indices.map(idx => {
+            if (idx < 2) {
+                // Player card indices stay the same (0,1)
+                return idx;
+            } else {
+                // Community card indices need to be offset
+                return idx;
+            }
+        }).slice(0, 5);
     };
 
     const findFlushSuit = (cards) => {
