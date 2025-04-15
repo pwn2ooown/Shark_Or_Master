@@ -248,11 +248,11 @@ body {
 }
 
 .greyed-card {
-    opacity: 0.4;
-    filter: grayscale(80%);
-    transform: none !important;
-    transition: opacity 0.5s ease;
-    box-shadow: none;
+    opacity: 0.4 !important;
+    filter: grayscale(80%) !important;
+    box-shadow: none !important;
+    border: none !important;
+    z-index: 1 !important;
 }
 
 @keyframes glowOnly {
@@ -780,11 +780,11 @@ input {
 }
 
 .greyed-card {
-    opacity: 0.4;
-    filter: grayscale(80%);
-    transform: none !important;
-    transition: opacity 0.5s ease;
-    box-shadow: none;
+    opacity: 0.4 !important;
+    filter: grayscale(80%) !important;
+    box-shadow: none !important;
+    border: none !important;
+    z-index: 1 !important;
 }
 
 @keyframes glowOnly {

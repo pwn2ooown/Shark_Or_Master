@@ -24,7 +24,7 @@ const shuffleDeck = (deck) => {
 };
 
 // Card display component
-const Card = ({ card, hidden, className = "", unused = false, greyed = false }) => {
+const Card = ({ card, hidden, className = "", highlight = false, greyed = false }) => {
     if (hidden) {
         return <div className={`card hidden ${className}`}>?</div>;
     }
@@ -38,7 +38,7 @@ const Card = ({ card, hidden, className = "", unused = false, greyed = false }) 
     else if (card.suit === 'spades') displaySuit = '♠';
     
     return (
-        <div className={`card ${card.suit} ${className} ${unused ? 'unused-card' : ''} ${greyed ? 'greyed-card' : ''}`}>
+        <div className={`card ${card.suit} ${className} ${highlight ? 'winning-card' : ''} ${greyed ? 'greyed-card' : ''}`}>
             {displayValue}{displaySuit}
         </div>
     );
@@ -380,10 +380,6 @@ const PokerGame = () => {
     const [revealProgress, setRevealProgress] = React.useState(0);
     const [swipeInfo, setSwipeInfo] = React.useState({ startX: null, currentX: null });
 
-    const addBalance = () => {
-        setPlayerMoney(prevMoney => prevMoney + 10000); // Changed to add 10k
-    };
-
     const calculateSideOdds = (results) => {
         const totalHands = results.length;
         const counts = {
@@ -444,16 +440,38 @@ const PokerGame = () => {
         }
     };
 
+    // Helper to check if both players have the same two card values (regardless of suit)
+    const isDuplicateHand = (hand1, hand2) => {
+        const values1 = hand1.map(card => card.value).sort();
+        const values2 = hand2.map(card => card.value).sort();
+        return values1[0] === values2[0] && values1[1] === values2[1];
+    };
+
+    // Helper to check if payoutMultiplier is less than 1.4 for either side
+    const isLowPayout = (odds) => {
+        const masterPayout = odds.master > 0 ? 1 / odds.master : 0;
+        const sharkPayout = odds.shark > 0 ? 1 / odds.shark : 0;
+        return masterPayout < 1.4 || sharkPayout < 1.4;
+    };
+
     const startNewGame = () => {
-        const newDeck = shuffleDeck(createDeck());
-        
-        // Deal 2 cards to each player
-        const newMasterCards = [newDeck[0], newDeck[2]];
-        const newSharkCards = [newDeck[1], newDeck[3]];
-        
-        // Set aside 5 cards for community
-        const newCommunityCards = [newDeck[4], newDeck[5], newDeck[6], newDeck[7], newDeck[8]];
-        
+        let newDeck, newMasterCards, newSharkCards, newCommunityCards, oddsResult, newSideOdds;
+        let tries = 0;
+        do {
+            newDeck = shuffleDeck(createDeck());
+            newMasterCards = [newDeck[0], newDeck[2]];
+            newSharkCards = [newDeck[1], newDeck[3]];
+            newCommunityCards = [newDeck[4], newDeck[5], newDeck[6], newDeck[7], newDeck[8]];
+            oddsResult = simulateWinProbability(newMasterCards, newSharkCards, [], 10000);
+            newSideOdds = calculateSideOdds(oddsResult.handResults);
+            tries++;
+            // Prevent infinite loop in rare case (should never happen in practice)
+            if (tries > 20) break;
+        } while (
+            isDuplicateHand(newMasterCards, newSharkCards) ||
+            isLowPayout(oddsResult)
+        );
+
         setDeck(newDeck);
         setMasterCards(newMasterCards);
         setSharkCards(newSharkCards);
@@ -462,7 +480,7 @@ const PokerGame = () => {
         setGameState('betting');
         setPlayerBet(null);
         setGameResult('');
-        setCardsRevealed(true); // Auto-reveal cards at game start
+        setCardsRevealed(true);
         setWinner(null);
         setWinnings(0);
         setMasterHandName('');
@@ -479,29 +497,17 @@ const PokerGame = () => {
         });
         setSideWinnings({});
         setPlayerWon(false);
-        
-        // Reset the selected bet button to make all buttons dark
         setSelectedBetButton(null);
-        
-        // Calculate initial odds based on hole cards
-        const { masterWinProbability, sharkWinProbability, tieProbability, handResults } = 
-            simulateWinProbability(newMasterCards, newSharkCards, [], 10000);
-        
         setOdds({
-            master: masterWinProbability,
-            shark: sharkWinProbability,
-            tie: tieProbability
+            master: oddsResult.masterWinProbability,
+            shark: oddsResult.sharkWinProbability,
+            tie: oddsResult.tieProbability
         });
-
-        // Calculate side bet odds
-        const newSideOdds = calculateSideOdds(handResults);
         setSideOdds(newSideOdds);
 
-        if (winHistory.length > 100) { // Limit history size
+        if (winHistory.length > 100) {
             setWinHistory(prev => prev.slice(-100));
         }
-
-        // Unlock betting for new game
         setIsBettingLocked(false);
     };
     
@@ -1061,17 +1067,23 @@ const PokerGame = () => {
                         <h2>Master {masterHandName && gameState === 'result' && `(${masterHandName})`}</h2>
                         <div className="player-cards">
                             {masterCards.map((card, index) => {
-                                const isWinningCard = gameState === 'result' && winningCardIndices.includes(index);
-                                const isUnused = gameState === 'result' && !winningCardIndices.includes(index) && winner === 'master';
-                                const isGreyed = gameState === 'result' && winner === 'shark';
+                                let highlight = false, greyed = false;
+                                if (gameState === 'result') {
+                                    if (winner === 'master') {
+                                        highlight = winningCardIndices.includes(index);
+                                        greyed = !highlight;
+                                    } else if (winner === 'shark') {
+                                        greyed = true;
+                                    }
+                                }
                                 return (
                                     <Card 
                                         key={`master-${index}`} 
                                         card={card} 
                                         hidden={!cardsRevealed && gameState !== 'result'} 
-                                        className={`card-reveal-animation ${isWinningCard ? 'winning-card' : ''}`}
-                                        unused={isUnused}
-                                        greyed={isGreyed}
+                                        className="card-reveal-animation"
+                                        highlight={highlight}
+                                        greyed={greyed}
                                     />
                                 );
                             })}
@@ -1091,17 +1103,19 @@ const PokerGame = () => {
                         <div className="card-container">
                             {communityCards.slice(0, revealedCommunityCards).map((card, index) => {
                                 const actualIndex = masterCards.length + index;
-                                const isWinningCard = gameState === 'result' && winningCardIndices.includes(actualIndex);
-                                const isUnused = gameState === 'result' && !winningCardIndices.includes(actualIndex);
-                                const isGreyed = gameState === 'result' && winner && !winningCardIndices.includes(actualIndex);
+                                let highlight = false, greyed = false;
+                                if (gameState === 'result') {
+                                    highlight = winningCardIndices.includes(actualIndex);
+                                    greyed = !highlight;
+                                }
                                 return (
                                     <Card 
                                         key={`community-${index}`} 
                                         card={card} 
                                         hidden={false} 
-                                        className={`card-reveal-animation ${isWinningCard ? 'winning-card' : ''}`}
-                                        unused={isUnused}
-                                        greyed={isGreyed}
+                                        className="card-reveal-animation"
+                                        highlight={highlight}
+                                        greyed={greyed}
                                     />
                                 );
                             })}
@@ -1121,17 +1135,23 @@ const PokerGame = () => {
                         <h2>Shark {sharkHandName && gameState === 'result' && `(${sharkHandName})`}</h2>
                         <div className="player-cards">
                             {sharkCards.map((card, index) => {
-                                const isWinningCard = gameState === 'result' && winner === 'shark' && winningCardIndices.includes(index);
-                                const isUnused = gameState === 'result' && !winningCardIndices.includes(index) && winner === 'shark';
-                                const isGreyed = gameState === 'result' && winner === 'master';
+                                let highlight = false, greyed = false;
+                                if (gameState === 'result') {
+                                    if (winner === 'shark') {
+                                        highlight = winningCardIndices.includes(index);
+                                        greyed = !highlight;
+                                    } else if (winner === 'master') {
+                                        greyed = true;
+                                    }
+                                }
                                 return (
                                     <Card 
                                         key={`shark-${index}`} 
                                         card={card} 
                                         hidden={!cardsRevealed && gameState !== 'result'} 
-                                        className={`card-reveal-animation ${isWinningCard ? 'winning-card' : ''}`}
-                                        unused={isUnused}
-                                        greyed={isGreyed}
+                                        className="card-reveal-animation"
+                                        highlight={highlight}
+                                        greyed={greyed}
                                     />
                                 );
                             })}
