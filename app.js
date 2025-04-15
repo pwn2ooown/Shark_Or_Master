@@ -24,10 +24,10 @@ const shuffleDeck = (deck) => {
 };
 
 const isDuplicateHand = (hand1, hand2) => {
-    return hand1[0] === hand2[0]
-    || hand1[0] === hand2[1]
-    || hand1[1] === hand2[0]
-    || hand1[1] === hand2[1];
+    return hand1[0].value === hand2[0].value
+    || hand1[0].value === hand2[1].value
+    || hand1[1].value === hand2[0].value
+    || hand1[1].value === hand2[1].value;
 };
 
 // Helper to check if payoutMultiplier is less than 1.4 for either side
