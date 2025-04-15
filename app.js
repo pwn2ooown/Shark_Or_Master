@@ -103,18 +103,32 @@ const getRank = (hand) => {
     let isStraight = false;
     let straightHighCard = 0;
     
-    // Handle Ace low straight (A-5-4-3-2)
-    if (values.includes(14) && values.includes(5) && values.includes(4) && 
-        values.includes(3) && values.includes(2)) {
+    // Check both Ace-high and Ace-low straights
+    const uniqueValues = [...new Set(values)].sort((a, b) => a - b);
+    
+    // Check for Ace-high straight (10-J-Q-K-A)
+    if (values.includes(14)) { // If we have an Ace
+        const aceHighStraight = [10, 11, 12, 13, 14];
+        if (aceHighStraight.every(value => values.includes(value))) {
+            isStraight = true;
+            straightHighCard = 14;
+        }
+    }
+    
+    // If no Ace-high straight, check for Ace-low straight (A-2-3-4-5)
+    if (!isStraight && values.includes(14) && values.includes(2) && 
+        values.includes(3) && values.includes(4) && values.includes(5)) {
         isStraight = true;
         straightHighCard = 5;
-    } else {
-        // Check normal straights
-        const uniqueValues = [...new Set(values)].sort((a, b) => b - a);
-        for (let i = 0; i <= uniqueValues.length - 5; i++) {
-            if (uniqueValues[i] - uniqueValues[i + 4] === 4) {
+    }
+    
+    // Check normal straights
+    if (!isStraight) {
+        for (let i = 0; i < uniqueValues.length - 4; i++) {
+            const consecutive = uniqueValues.slice(i, i + 5);
+            if (consecutive[4] - consecutive[0] === 4) {
                 isStraight = true;
-                straightHighCard = uniqueValues[i];
+                straightHighCard = consecutive[4];
                 break;
             }
         }
@@ -942,16 +956,42 @@ const PokerGame = () => {
                 break;
                 
             case 4: // Straight
-                allCards.forEach((card, index) => {
-                    const cardValue = getCardValue(card.value);
-                    const highCard = handRank.value;
-                    // For 5-high straight (A-5-4-3-2), special case
-                    if (highCard === 5 && card.value === 'A') {
-                        indices.push(index);
-                    } else if (cardValue <= highCard && cardValue > highCard - 5) {
-                        indices.push(index);
+                // Get all unique values first, sorted ascending
+                const sortedCards = allCards
+                    .map((card, index) => ({ card, index, value: getCardValue(card.value) }))
+                    .sort((a, b) => a.value - b.value); // Sort ascending for straights
+
+                // Remove duplicates keeping the first occurrence
+                const uniqueSortedCards = [];
+                const seenValues = new Set();
+                for (const card of sortedCards) {
+                    if (!seenValues.has(card.value)) {
+                        seenValues.add(card.value);
+                        uniqueSortedCards.push(card);
                     }
-                });
+                }
+
+                // For Ace-low straight (A-2-3-4-5)
+                if (handRank.value === 5 && seenValues.has(14)) {
+                    const wheelStraight = uniqueSortedCards.filter(card => 
+                        [2, 3, 4, 5, 14].includes(card.value)
+                    );
+                    wheelStraight.forEach(card => indices.push(card.index));
+                }
+                // For all other straights
+                else {
+                    // Find the start of our straight
+                    for (let i = 0; i < uniqueSortedCards.length - 4; i++) {
+                        const consecutive = uniqueSortedCards.slice(i, i + 5);
+                        if (consecutive[4].value - consecutive[0].value === 4) {
+                            // If this is our straight (matches the high card)
+                            if (consecutive[4].value === handRank.value) {
+                                consecutive.forEach(card => indices.push(card.index));
+                                break;
+                            }
+                        }
+                    }
+                }
                 break;
                 
             case 3: // Three of a kind
