@@ -843,20 +843,16 @@ const PokerGame = () => {
         
         let winAmount = 0;
         let resultText = '';
-        let totalSideWinnings = 0; // Track side bet winnings separately
-        
+        let totalWinnings = 0;
+        let hasSideWin = false;
+
         if (result > 0) { // Master wins
             setWinner('master');
             updateWinHistory('master');
             if (playerBet === 'master') {
                 const payoutMultiplier = odds.master > 0 ? (1 / odds.master) : 1;
                 winAmount = Math.floor(masterBet * payoutMultiplier * RAKE);
-                // console.log(masterBet,payoutMultiplier);
-                resultText += `+ $${winAmount}`;
-                setPlayerWon(true);
-            } else if (playerBet === 'shark') {
-                resultText += ' You lose your main bet.';
-                setPlayerWon(false);
+                totalWinnings += winAmount;
             }
         } else if (result < 0) { // Shark wins
             setWinner('shark');
@@ -864,53 +860,54 @@ const PokerGame = () => {
             if (playerBet === 'shark') {
                 const payoutMultiplier = odds.shark > 0 ? (1 / odds.shark) : 1;
                 winAmount = Math.floor(sharkBet * payoutMultiplier * RAKE);
-                resultText += `+ $${winAmount}`;
-                setPlayerWon(true);
-            } else if (playerBet === 'master') {
-                resultText += ' You lose your main bet.';
-                setPlayerWon(false);
+                totalWinnings += winAmount;
             }
         } else { // Tie
             setWinner('tie');
             updateWinHistory('tie');
-            resultText = `It's a tie! Both players have ${getHandName(masterRank)}.`;
             if (playerBet) {
-                // Return bet on tie
                 winAmount = masterBet + sharkBet;
-                resultText += ' Your bet is returned.';
+                totalWinnings += winAmount;
             }
         }
-        
+
         // Calculate side bet winnings
         const winningRank = getRank(result > 0 ? masterHand : sharkHand);
         const sideWinnings = {};
+        let totalSideWinnings = 0;
 
         Object.entries(SIDE_BETS).forEach(([category, { ranks }]) => {
             if (ranks.includes(winningRank.rank) && sideBets[category] > 0) {
                 const payoutMultiplier = sideOdds[category].odds > 0 ? 
                     Math.round((1 / sideOdds[category].odds) * 100) / 100 : 1;
-                // Apply rake to side bet winnings
                 const sideWinAmount = Math.floor(sideBets[category] * payoutMultiplier * RAKE);
                 sideWinnings[category] = sideWinAmount;
                 totalSideWinnings += sideWinAmount;
+                hasSideWin = true;
             }
         });
 
         setSideWinnings(sideWinnings);
         
-        // Add side bet details to result text if any side bets won
+        // Set playerWon to true if either main bet or side bets were won
+        setPlayerWon(totalWinnings + totalSideWinnings > 0);
+
+        // Only show numbers if there are winnings
+        if (totalWinnings + totalSideWinnings > 0) {
+            resultText = `+ $${totalWinnings + totalSideWinnings}`;
+        } else {
+            resultText = 'You lose.';
+        }
+
+        // Update player money
+        if (winAmount > 0) {
+            setPlayerMoney(prev => prev + winAmount);
+        }
         if (totalSideWinnings > 0) {
-            resultText += ` You also won $${totalSideWinnings} on side bets!`;
             setPlayerMoney(prev => prev + totalSideWinnings);
         }
         
-        // Set total winnings (main bet + side bets)
-        const totalWinnings = winAmount + totalSideWinnings;
-        if (winAmount > 0) {
-            setPlayerMoney(prevMoney => prevMoney + winAmount);
-        }
-        
-        setWinnings(totalWinnings);
+        setWinnings(totalWinnings + totalSideWinnings);
         setGameResult(resultText);
         setGameState('result');
     };
@@ -1092,6 +1089,11 @@ const PokerGame = () => {
                             <p className="odds-display">× {odds.master > 0 ? (1 / odds.master).toFixed(2) : 'N/A'}</p>
                         </div>
                     )}
+                    {gameState === 'result' && playerBet === 'master' && winnings > 0 && (
+                        <div className="player-bet-info">
+                            <p className="winning-amount">+ ${winnings}</p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="community-section">
@@ -1160,10 +1162,15 @@ const PokerGame = () => {
                             <p className="odds-display">× {odds.shark > 0 ? (1 / odds.shark).toFixed(2) : 'N/A'}</p>
                         </div>
                     )}
+                    {gameState === 'result' && playerBet === 'shark' && winnings > 0 && (
+                        <div className="player-bet-info">
+                            <p className="winning-amount">+ ${winnings}</p>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {(gameState === 'betting' || gameState === 'dealing') && (
+            {(gameState === 'betting' || gameState === 'dealing' || gameState === 'result') && (
                 <>
                     <div className="side-bets">
                         <h3>Side Bets</h3>
@@ -1171,108 +1178,111 @@ const PokerGame = () => {
                             {Object.entries(sideOdds).map(([category, { name, odds }]) => (
                                 <div 
                                     key={category} 
-                                    className={`side-bet-box ${gameState === 'betting' && !isBettingLocked ? 'clickable' : ''}`}
+                                    className={`side-bet-box ${gameState === 'betting' && !isBettingLocked ? 'clickable' : ''} 
+                                        ${sideWinnings[category] ? 'winning-side-bet' : ''}`}
                                     onClick={() => gameState === 'betting' && !isBettingLocked && betAmount && placeSideBet(category)}
                                 >
                                     <h4>{name}</h4>
                                     <p>${sideBets[category]}</p>
                                     <p>× {odds > 0 ? (1 / odds).toFixed(2) : 'N/A'}</p>
                                     {sideWinnings[category] && (
-                                        <p className="green">Won ${sideWinnings[category]}!</p>
+                                        <p className="green">+ ${sideWinnings[category]}</p>
                                     )}
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    <div className="betting-area">
-                        <div className="player-balance">
-                            Balance: ${playerMoney}
-                            <button className="reset-button" onClick={resetGame}>Reset Game</button>
+                    {(gameState === 'betting' || gameState === 'dealing' ) && (
+                        <div className="betting-area">
+                            <div className="player-balance">
+                                Balance: ${playerMoney}
+                                <button className="reset-button" onClick={resetGame}>Reset Game</button>
+                            </div>
+                            
+                            <div className="betting-buttons-wrapper">
+                                <div className="quick-bet-buttons">
+                                    <QuickBetButton 
+                                        value={1} 
+                                        playerMoney={playerMoney} 
+                                        onClick={handleQuickBet} 
+                                        className={`small ${isBettingLocked ? 'locked' : ''}`}
+                                        isSelected={selectedBetButton === 1}
+                                        disabled={isBettingLocked}
+                                    />
+                                    <QuickBetButton 
+                                        value={10} 
+                                        playerMoney={playerMoney} 
+                                        onClick={handleQuickBet} 
+                                        className={`small ${isBettingLocked ? 'locked' : ''}`}
+                                        isSelected={selectedBetButton === 10}
+                                        disabled={isBettingLocked}
+                                    />
+                                    <QuickBetButton 
+                                        value={100} 
+                                        playerMoney={playerMoney} 
+                                        onClick={handleQuickBet} 
+                                        className={`medium ${isBettingLocked ? 'locked' : ''}`}
+                                        isSelected={selectedBetButton === 100}
+                                        disabled={isBettingLocked}
+                                    />
+                                    <QuickBetButton 
+                                        value={1000} 
+                                        playerMoney={playerMoney} 
+                                        onClick={handleQuickBet} 
+                                        className={`large ${isBettingLocked ? 'locked' : ''}`}
+                                        isSelected={selectedBetButton === 1000}
+                                        disabled={isBettingLocked}
+                                    />
+                                    <QuickBetButton 
+                                        value={10000} 
+                                        playerMoney={playerMoney} 
+                                        onClick={handleQuickBet} 
+                                        className={`max ${isBettingLocked ? 'locked' : ''}`}
+                                        isSelected={selectedBetButton === 10000}
+                                        disabled={isBettingLocked}
+                                    />
+                                    <QuickBetButton 
+                                        value={'all'}
+                                        playerMoney={playerMoney} 
+                                        onClick={handleQuickBet} 
+                                        className="all-in"
+                                        isSelected={selectedBetButton === playerMoney}
+                                        disabled={isBettingLocked}
+                                    />
+                                </div>
+                                <div className="controls-container">
+                                    <button 
+                                        className={`repeat-bet ${isBettingLocked ? 'locked' : ''}`} 
+                                        onClick={repeatLastBet}
+                                        disabled={isBettingLocked}
+                                    >
+                                        Repeat Last Bet
+                                    </button>
+                                    <button className="start-game" onClick={startRound}>
+                                        {isBettingLocked ? "Dealing..." : "Deal The Cards"}
+                                    </button>
+                                    <button 
+                                        className={`take-back ${isBettingLocked ? 'locked' : ''}`} 
+                                        onClick={takeBetsBack}
+                                        disabled={isBettingLocked}
+                                    >
+                                        Take Back Bets
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            {gameState === 'betting' && parseInt(betAmount) > playerMoney && (
+                                <></>
+                            )}
+                            
+                            {isBettingLocked && gameState === 'betting' && (
+                                <div className="betting-locked-message">
+                                    Bets are locked. Dealing in progress...
+                                </div>
+                            )}
                         </div>
-                        
-                        <div className="betting-buttons-wrapper">
-                            <div className="quick-bet-buttons">
-                                <QuickBetButton 
-                                    value={1} 
-                                    playerMoney={playerMoney} 
-                                    onClick={handleQuickBet} 
-                                    className={`small ${isBettingLocked ? 'locked' : ''}`}
-                                    isSelected={selectedBetButton === 1}
-                                    disabled={isBettingLocked}
-                                />
-                                <QuickBetButton 
-                                    value={10} 
-                                    playerMoney={playerMoney} 
-                                    onClick={handleQuickBet} 
-                                    className={`small ${isBettingLocked ? 'locked' : ''}`}
-                                    isSelected={selectedBetButton === 10}
-                                    disabled={isBettingLocked}
-                                />
-                                <QuickBetButton 
-                                    value={100} 
-                                    playerMoney={playerMoney} 
-                                    onClick={handleQuickBet} 
-                                    className={`medium ${isBettingLocked ? 'locked' : ''}`}
-                                    isSelected={selectedBetButton === 100}
-                                    disabled={isBettingLocked}
-                                />
-                                <QuickBetButton 
-                                    value={1000} 
-                                    playerMoney={playerMoney} 
-                                    onClick={handleQuickBet} 
-                                    className={`large ${isBettingLocked ? 'locked' : ''}`}
-                                    isSelected={selectedBetButton === 1000}
-                                    disabled={isBettingLocked}
-                                />
-                                <QuickBetButton 
-                                    value={10000} 
-                                    playerMoney={playerMoney} 
-                                    onClick={handleQuickBet} 
-                                    className={`max ${isBettingLocked ? 'locked' : ''}`}
-                                    isSelected={selectedBetButton === 10000}
-                                    disabled={isBettingLocked}
-                                />
-                                <QuickBetButton 
-                                    value={'all'}
-                                    playerMoney={playerMoney} 
-                                    onClick={handleQuickBet} 
-                                    className="all-in"
-                                    isSelected={selectedBetButton === playerMoney}
-                                    disabled={isBettingLocked}
-                                />
-                            </div>
-                            <div className="controls-container">
-                                <button 
-                                    className={`repeat-bet ${isBettingLocked ? 'locked' : ''}`} 
-                                    onClick={repeatLastBet}
-                                    disabled={isBettingLocked}
-                                >
-                                    Repeat Last Bet
-                                </button>
-                                <button className="start-game" onClick={startRound}>
-                                    {isBettingLocked ? "Dealing..." : "Deal The Cards"}
-                                </button>
-                                <button 
-                                    className={`take-back ${isBettingLocked ? 'locked' : ''}`} 
-                                    onClick={takeBetsBack}
-                                    disabled={isBettingLocked}
-                                >
-                                    Take Back Bets
-                                </button>
-                            </div>
-                        </div>
-                        
-                        {gameState === 'betting' && parseInt(betAmount) > playerMoney && (
-                            <></>
-                        )}
-                        
-                        {isBettingLocked && gameState === 'betting' && (
-                            <div className="betting-locked-message">
-                                Bets are locked. Dealing in progress...
-                            </div>
-                        )}
-                    </div>
+                    )}
                 </>
             )}
             

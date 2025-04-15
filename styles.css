@@ -264,6 +264,14 @@ body {
     }
 }
 
+.winning-amount {
+    color: #4caf50;
+    font-size: 24px;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+    animation: winningTextAnimation 2s infinite;
+}
+
 .betting-area {
     order: 3;
     background-color: rgba(0, 0, 0, 0.4);
@@ -634,6 +642,24 @@ input {
     margin-top: 4px;
     color: #4caf50;
     animation: pulse 1.5s infinite;
+}
+
+.side-bet-box.winning-side-bet {
+    animation: sideBetWin 2s infinite;
+    border: 2px solid #4caf50;
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+}
+
+@keyframes sideBetWin {
+    0% {
+        box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(76, 175, 80, 0.8);
+    }
+    100% {
+        box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+    }
 }
 
 .betting-controls {
