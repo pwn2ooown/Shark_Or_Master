@@ -1,0 +1,1043 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none; /* Prevent text selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+.disclaimer, .history-popup-content {
+    user-select: text; /* Allow text selection only in these areas */
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #15884a; /* Lightened green background */
+    color: white;
+}
+
+.game-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 8px;
+    background-color: rgba(21, 136, 74, 0.95); /* Lightened green background */
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    justify-content: space-between;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 10px; /* Increased margin */
+}
+
+.header h1 {
+    font-size: 32px; /* Increased font size */
+    margin-bottom: 5px;
+    color: #ffd700; /* Gold color for better visibility */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.header p {
+    font-size: 10px; /* Reduced from 12px */
+    margin-bottom: 1px; /* Reduced from 2px */
+}
+
+.players {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.player {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px; /* Reduced from 10px */
+    padding: 15px;
+    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.4);
+    text-align: center;
+}
+
+.player h2 {
+    font-size: 14px; /* Reduced from 16px */
+    margin-bottom: 3px; /* Reduced from 5px */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.player-cards {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 8px; /* Reduced from 10px */
+    padding: 3px 0; /* Reduced from 5px */
+}
+
+.community-cards {
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    padding: 6px; /* Reduced from 8px */
+    border-radius: 10px;
+    text-align: center;
+    min-height: 160px; /* Reduced from 200px */
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    max-width: 450px; /* Limit width of community cards */
+    margin: 0 auto; /* Center in available space */
+}
+
+.community-cards h2 {
+    margin-bottom: 5px; /* Reduced from 10px */
+    font-size: 14px; /* Reduced from 16px */
+}
+
+.community-cards .card-container {
+    display: flex;
+    justify-content: center;
+    gap: 6px; /* Reduced from 8px */
+    padding: 8px; /* Reduced from 10px */
+    flex-wrap: nowrap;
+    min-height: 120px; /* Reduced from 140px */
+    align-items: center;
+}
+
+.community-cards .card {
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+.card {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 60px; /* Reduced from 70px */
+    height: 85px; /* Reduced from 100px */
+    background-color: white;
+    border-radius: 6px; /* Reduced from 8px */
+    margin: 0;
+    color: black;
+    font-size: 16px; /* Reduced from 18px */
+    line-height: 85px; /* Adjusted to match new height */
+    text-align: center;
+    position: relative;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transform-style: preserve-3d;
+    transition: none; /* Remove all transitions */
+    transform: none !important; /* Ensure no transforms are applied */
+}
+
+.card.hearts, .card.diamonds {
+    color: red;
+}
+
+.card.hidden {
+    background-color: #1a1a1a;
+    color: #1a1a1a;
+}
+
+.card-reveal-animation {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes flipCard {
+    0% {
+        transform: rotateY(90deg);
+        opacity: 0;
+    }
+    100% {
+        transform: rotateY(0deg);
+        opacity: 1;
+    }
+}
+
+/* Improve the final card styling for better touch interaction */
+.final-card {
+    width: 200px;
+    height: 300px;
+    font-size: 48px;
+    line-height: 300px;
+    cursor: pointer; /* Change to pointer to indicate clickability */
+    transform-style: preserve-3d;
+    position: relative;
+    transition: transform 0.1s ease-out;
+    touch-action: pan-y; /* Prevent default horizontal swiping behaviors */
+    will-change: transform; /* Optimize for animation */
+}
+
+/* Add a subtle hover effect to indicate clickability */
+.final-card:hover:not(.flipped) {
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.4);
+}
+
+.final-card .big-final-card {
+    width: 100%;
+    height: 100%;
+    font-size: 72px;
+    line-height: 300px;
+}
+
+.final-card-front, .final-card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 15px;
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    touch-action: none; /* Prevent any touch actions that might interfere */
+}
+
+.final-card-front {
+    background: #1a1a1a;
+    transform: rotateY(180deg);
+}
+
+.final-card-back {
+    background-color: white;
+    color: transparent; /* Hide the ? character */
+}
+
+.final-card.flipped {
+    transform: rotateY(180deg) !important;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.betting-area {
+    order: 3;
+    background-color: rgba(0, 0, 0, 0.4);
+    padding: 8px; /* Reduced from 10px */
+    border-radius: 10px;
+    margin: 5px 0; /* Reduced from 10px */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.bet-amount {
+    font-size: 18px; /* Reduced from 22px */
+    color: #ffd700;
+    margin: 3px 0; /* Reduced from 5px */
+    font-weight: bold;
+}
+
+.player-balance {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px; /* Reduced from 16px */
+    color: #ffd700;
+    margin-bottom: 3px; /* Reduced from 5px */
+}
+
+.player-bet-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 5px;
+}
+
+.player-bet-info h3 {
+    color: #ffd700;
+    font-size: 24px;
+    margin-bottom: 2px;
+}
+
+.odds-display {
+    font-size: 11px;
+    color: #ffd700;
+    opacity: 0.9;
+}
+
+.quick-bet-buttons {
+    display: grid;
+    grid-template-columns: repeat(6, auto);
+    gap: 6px;
+    margin: 3px 0;
+    justify-content: center;
+    align-items: center;
+}
+
+.quick-bet-button {
+    background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
+    color: #ffd700;
+    border: 2px solid #444;
+    padding: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    font-weight: bold;
+    transform-origin: center;
+    transition: all 0.3s ease;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.quick-bet-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(255, 215, 0, 0.2);
+}
+
+.quick-bet-button.selected {
+    background: linear-gradient(145deg, #ffd700, #daa520);
+    color: #000;
+    border-color: #b8860b;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+.quick-bet-button.small {
+    width: 40px; /* Reduced from 50px */
+    height: 40px; /* Reduced from 50px */
+    font-size: 12px; /* Reduced from 14px */
+}
+
+.quick-bet-button.medium {
+    width: 50px; /* Reduced from 65px */
+    height: 50px; /* Reduced from 65px */
+    font-size: 14px; /* Reduced from 18px */
+}
+
+.quick-bet-button.large {
+    width: 60px; /* Reduced from 80px */
+    height: 60px; /* Reduced from 80px */
+    font-size: 16px; /* Reduced from 20px */
+}
+
+.quick-bet-button.max {
+    width: 70px; /* Reduced from 95px */
+    height: 70px; /* Reduced from 95px */
+    font-size: 18px; /* Reduced from 22px */
+}
+
+.quick-bet-button.all-in {
+    width: 65px;
+    height: 65px;
+    font-size: 15px;
+    background: white;
+    color: #f50057;
+    border-color: #f50057;
+    border-radius: 50%;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 15px rgba(255, 64, 129, 0.2);
+}
+
+.quick-bet-button.all-in:not(.disabled):hover {
+    background: #fff9fb;
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 64, 129, 0.3);
+}
+
+.quick-bet-button.all-in.selected {
+    background: linear-gradient(145deg, #ff4081, #f50057);
+    color: white;
+    border-color: #c51162;
+    box-shadow: 0 0 20px rgba(255, 64, 129, 0.5);
+}
+
+.quick-bet-button.all-in:not(.disabled):hover {
+    background: linear-gradient(145deg, #f50057, #c51162);
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 64, 129, 0.5);
+}
+
+.quick-bet-button:disabled {
+    background: linear-gradient(145deg, #333, #222);
+    border-color: #333;
+    color: #666;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.quick-bet-button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #555;
+    border-color: #444;
+    color: #999;
+    transform: none !important;
+    box-shadow: none;
+    pointer-events: none;
+}
+
+.quick-bet-button:not(.disabled):hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(255, 215, 0, 0.2);
+}
+
+.quick-bet-button.locked,
+.repeat-bet.locked,
+.take-back.locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #555;
+    border-color: #444;
+    color: #999;
+    transform: none;
+    box-shadow: none;
+}
+
+.betting-box button {
+    background-color: #ffc107;
+    color: #333;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+.start-game {
+    background-color: #ff4081;
+    color: white;
+    border: none;
+    padding: 6px 10px; /* Reduced from 8px 12px */
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 12px; /* Reduced from 14px */
+    transition: background-color 0.3s ease;
+}
+
+.start-game:hover {
+    background-color: #e63674;
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin: 10px 0;
+    order: 2;
+}
+
+.controls button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.controls button:hover {
+    background-color: #0056b3;
+}
+
+.controls button.calculate-winner {
+    background-color: #ff9800;
+    color: white;
+}
+
+.controls button.calculate-winner:hover {
+    background-color: #e68a00;
+}
+
+.controls button.new-game {
+    background-color: #4caf50;
+    color: white;
+    font-size: 16px;
+    padding: 10px 25px;
+    min-width: 200px;
+}
+
+.controls button.new-game:hover {
+    background-color: #3d8b40;
+}
+
+.controls button.start-game {
+    font-size: 14px;
+    padding: 8px 12px;
+    min-width: 200px;
+}
+
+.controls-container {
+    display: flex;
+    justify-content: center;
+    gap: 6px; /* Reduced from 8px */
+    margin-top: 3px; /* Reduced from 5px */
+}
+
+.odds {
+    text-align: center;
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+.player-info {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 20px;
+}
+
+.winner-highlight {
+    box-shadow: 0 0 15px gold;
+    animation: pulsate 1.5s infinite alternate;
+}
+
+@keyframes pulsate {
+    0% { box-shadow: 0 0 15px gold; }
+    100% { box-shadow: 0 0 25px gold; }
+}
+
+input {
+    padding: 10px;
+    width: 100%;
+    margin-top: 10px;
+    border-radius: 5px;
+    border: none;
+}
+
+.red {
+    color: #ff5252;
+}
+
+.green {
+    color: #4caf50;
+}
+
+.side-bets {
+    order: 2;
+    background-color: rgba(0, 0, 0, 0.4);
+    padding: 6px; /* Reduced from 8px */
+    border-radius: 10px;
+    margin-bottom: 6px; /* Reduced from 8px */
+}
+
+.side-bets h3 {
+    text-align: center;
+    margin-bottom: 6px; /* Reduced from 8px */
+    color: #ffc107;
+    font-size: 13px; /* Reduced from 14px */
+}
+
+.side-bet-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); /* Reduced from 150px */
+    gap: 6px; /* Reduced from 8px */
+    justify-content: space-between;
+}
+
+.side-bet-box {
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 6px; /* Reduced from 8px */
+    border-radius: 8px;
+    flex: 1;
+    min-width: 100px; /* Reduced from 120px */
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.side-bet-box:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+.side-bet-box.clickable:hover {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.side-bet-box.disabled {
+    cursor: not-allowed;
+    opacity: 0.7; /* Changed from 0.5 to 0.7 for better visibility */
+    pointer-events: none;
+}
+
+.side-bet-box p:first-of-type {
+    color: #ffd700;
+    font-size: 16px; /* Reduced from 20px */
+    margin: 5px 0; /* Reduced from 10px */
+}
+
+.side-bet-box h4 {
+    font-size: 11px; /* Reduced from 12px */
+}
+
+.side-bet-box p {
+    font-size: 11px; /* Reduced from 12px */
+    margin: 2px 0; /* Reduced from 3px */
+}
+
+.betting-controls {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin: 15px 0;
+}
+
+.betting-buttons-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.repeat-bet, .take-back {
+    background-color: #9c27b0;
+    color: white;
+    border: none;
+    padding: 6px 10px; /* Reduced from 8px 12px */
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 12px; /* Reduced from 14px */
+    transition: all 0.3s ease;
+}
+
+.repeat-bet:hover {
+    background-color: #7b1fa2;
+}
+
+.take-back {
+    background-color: #f44336;
+}
+
+.take-back:hover {
+    background-color: #d32f2f;
+}
+
+.final-card-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.swipe-instruction {
+    color: #ffd700;
+    font-size: 24px;
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+}
+
+.final-card {
+    width: 200px;
+    height: 300px;
+    font-size: 48px;
+    line-height: 300px;
+    cursor: pointer; /* Change to pointer to indicate clickability */
+    transform-style: preserve-3d;
+    position: relative;
+    transition: transform 0.1s ease-out;
+    touch-action: pan-y; /* Prevent default horizontal swiping behaviors */
+    will-change: transform; /* Optimize for animation */
+}
+
+/* Add a subtle hover effect to indicate clickability */
+.final-card:hover:not(.flipped) {
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.4);
+}
+
+.final-card .big-final-card {
+    width: 100%;
+    height: 100%;
+    font-size: 72px;
+    line-height: 300px;
+}
+
+.final-card-front, .final-card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 15px;
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    touch-action: none; /* Prevent any touch actions that might interfere */
+}
+
+.final-card-front {
+    background: #1a1a1a;
+    transform: rotateY(180deg);
+}
+
+.final-card-back {
+    background-color: white;
+    color: transparent; /* Hide the ? character */
+}
+
+.final-card.flipped {
+    transform: rotateY(180deg) !important;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.winning-card {
+    box-shadow: 0 0 15px #ffeb3b;
+    border: 2px solid #ffeb3b;
+    animation: glowOnly 1.5s infinite alternate;
+    transform: none !important; /* Prevent any transformations */
+    position: relative;
+    z-index: 5;
+}
+
+@keyframes glowOnly {
+    0% { 
+        box-shadow: 0 0 15px #ffeb3b;
+    }
+    100% { 
+        box-shadow: 0 0 25px #ffeb3b;
+    }
+}
+
+.game-layout {
+    display: grid;
+    grid-template-columns: 260px minmax(300px, 1fr) 260px; /* Adjusted sizes to give more space to characters */
+    gap: 8px;
+    margin: 5px 0;
+    align-items: stretch;
+    min-height: 180px;
+}
+
+.player-section {
+    width: 100%;
+    min-width: 240px; /* Reduced from 280px */
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px; /* Reduced from 10px */
+    padding: 8px 15px; /* Increased horizontal padding */
+    background-color: rgba(0, 0, 0, 0.4);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: visible; /* Ensure character images can overflow */
+}
+
+.player-section:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+.player-section.clickable {
+    cursor: pointer;
+}
+
+.player-section.disabled {
+    cursor: default;
+    opacity: 0.9;
+}
+
+.player-section h3 {
+    color: #ffd700;
+    font-size: 24px;
+}
+
+.player-character {
+    position: absolute;
+    width: 90px; /* Increased size */
+    height: 90px; /* Increased size */
+    object-fit: contain;
+    z-index: 2; /* Make sure images appear above other elements */
+}
+
+.master .player-character {
+    top: -45px;
+    left: -20px; /* Adjusted position */
+}
+
+.shark .player-character {
+    top: -45px;
+    right: -20px; /* Adjusted position */
+}
+
+.community-section {
+    align-self: center;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 10px; /* Added horizontal padding */
+}
+
+.win-history {
+    order: 999;
+    margin-top: 40px;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.history-grid {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.win-history {
+    background-color: rgba(0, 0, 0, 0.4);
+    padding: 15px;
+    border-radius: 10px;
+    margin: 20px 0;
+}
+
+.win-history h3 {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #ffc107;
+}
+
+.history-grid {
+    display: grid;
+    grid-template-columns: repeat(20, 25px);
+    grid-auto-rows: 25px;
+    gap: 2px;
+    justify-content: center;
+    padding: 10px;
+    overflow-x: auto;
+    margin: 0 auto;
+    min-width: min-content;
+    width: fit-content;
+}
+
+.history-cell {
+    width: 25px;
+    height: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.history-cell.master {
+    background-color: #2196f3;
+    color: white;
+}
+
+.history-cell.shark {
+    background-color: #f44336;
+    color: white;
+}
+
+.history-cell.tie {
+    background-color: #4caf50;
+    color: white;
+}
+
+.history-button {
+    position: fixed;
+    bottom: 10px; /* Reduced from 15px */
+    right: 10px; /* Reduced from 15px */
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    width: auto;
+    height: auto;
+    font-size: 12px; /* Reduced from 14px */
+    padding: 6px 12px; /* Reduced from 8px 15px */
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+    z-index: 9;
+    transition: all 0.3s ease;
+}
+
+.history-button::before {
+    content: "📊";
+    font-size: 14px; /* Reduced from 16px */
+}
+
+.history-button:hover {
+    transform: scale(1.1);
+    background-color: #0d8bf2;
+}
+
+.history-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.85);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.history-popup-content {
+    background-color: rgba(13, 90, 47, 0.95);
+    border-radius: 10px;
+    padding: 20px;
+    max-width: 90%;
+    max-height: 90%;
+    overflow: auto;
+    position: relative;
+}
+
+.close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #ff4081;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.close-button:hover {
+    background-color: #e63674;
+}
+
+.betting-locked-message {
+    color: #ff9800;
+    font-size: 14px;
+    font-weight: bold;
+    margin-top: 10px;
+    text-align: center;
+    animation: pulse 1.5s infinite;
+}
+
+.disclaimer-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+    order: 999; /* Ensure it's at the bottom */
+}
+
+.disclaimer {
+    padding: 5px;
+    font-size: 10px;
+    color: #aaa;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+    max-width: 600px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.refresh-note {
+    display: block;
+    margin-top: 2px;
+    color: #ffd700;
+    font-size: 10px;
+    font-style: italic;
+}
+
+.error-message {
+    color: #ff6b6b;
+    font-size: 12px;
+    margin-top: 5px;
+    text-align: center;
+}
+
+.reset-button {
+    background-color: #ff9800;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 3px 6px;
+    margin-left: 10px;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.reset-button:hover {
+    background-color: #f57c00;
+}
+
+.winning-message-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 100;
+    pointer-events: none;
+}
+
+.winning-message {
+    font-size: 42px;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 
+        0 0 10px rgba(255, 215, 0, 0.8),
+        0 0 20px rgba(255, 215, 0, 0.5),
+        0 0 30px rgba(255, 215, 0, 0.3),
+        2px 2px 2px rgba(0, 0, 0, 0.7);
+    animation: winningTextAnimation 2s infinite;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 15px 30px;
+    border-radius: 10px;
+    border: 2px solid #ffd700;
+    white-space: nowrap;
+}
+
+@keyframes winningTextAnimation {
+    0% {
+        transform: scale(1);
+        opacity: 0.9;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0.9;
+    }
+}
