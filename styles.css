@@ -42,7 +42,7 @@ body {
 
 .header h1 {
     font-size: 32px; /* Increased font size */
-    margin-bottom: 5px;
+    margin-bottom: 2px;
     color: #ffd700; /* Gold color for better visibility */
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
@@ -219,11 +219,49 @@ body {
 .final-card-back {
     background-color: white;
     color: transparent; /* Hide the ? character */
+    background-image: url('static/cardback.png');
+    background-size: cover;
+    background-position: center;
+    /* Always visible, even if not flipped */
 }
 
 .final-card.flipped {
     transform: rotateY(180deg) !important;
     transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.winning-card {
+    box-shadow: 0 0 15px #ffeb3b;
+    border: 2px solid #ffeb3b;
+    animation: glowOnly 1.5s infinite alternate;
+    transform: none !important; /* Prevent any transformations */
+    position: relative;
+    z-index: 5;
+}
+
+.unused-card {
+    opacity: 0.4;
+    filter: grayscale(80%);
+    transform: none !important;
+    transition: opacity 0.5s ease;
+    box-shadow: none;
+}
+
+.greyed-card {
+    opacity: 0.4;
+    filter: grayscale(80%);
+    transform: none !important;
+    transition: opacity 0.5s ease;
+    box-shadow: none;
+}
+
+@keyframes glowOnly {
+    0% { 
+        box-shadow: 0 0 15px #ffeb3b;
+    }
+    100% { 
+        box-shadow: 0 0 25px #ffeb3b;
+    }
 }
 
 .betting-area {
@@ -590,6 +628,14 @@ input {
     margin: 2px 0; /* Reduced from 3px */
 }
 
+.side-bet-box p.green {
+    font-size: 12px;
+    font-weight: bold;
+    margin-top: 4px;
+    color: #4caf50;
+    animation: pulse 1.5s infinite;
+}
+
 .betting-controls {
     display: flex;
     justify-content: center;
@@ -705,6 +751,10 @@ input {
 .final-card-back {
     background-color: white;
     color: transparent; /* Hide the ? character */
+    background-image: url('static/cardback.png');
+    background-size: cover;
+    background-position: center;
+    /* Always visible, even if not flipped */
 }
 
 .final-card.flipped {
@@ -719,6 +769,22 @@ input {
     transform: none !important; /* Prevent any transformations */
     position: relative;
     z-index: 5;
+}
+
+.unused-card {
+    opacity: 0.4;
+    filter: grayscale(80%);
+    transform: none !important;
+    transition: opacity 0.5s ease;
+    box-shadow: none;
+}
+
+.greyed-card {
+    opacity: 0.4;
+    filter: grayscale(80%);
+    transform: none !important;
+    transition: opacity 0.5s ease;
+    box-shadow: none;
 }
 
 @keyframes glowOnly {
@@ -970,10 +1036,10 @@ input {
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.refresh-note {
+.rake-note {
     display: block;
     margin-top: 2px;
-    color: #ffd700;
+    color: #ff9800; /* Different color to emphasize the rake information */
     font-size: 10px;
     font-style: italic;
 }
