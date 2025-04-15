@@ -1074,23 +1074,25 @@ input {
     transform: translate(-50%, -50%);
     z-index: 100;
     pointer-events: none;
+    width: 90%;
+    max-width: 600px;
+    text-align: center;
 }
 
 .winning-message {
-    font-size: 42px;
+    font-size: 24px; /* Reduced from 42px */
     font-weight: bold;
     color: #ffd700;
     text-shadow: 
         0 0 10px rgba(255, 215, 0, 0.8),
-        0 0 20px rgba(255, 215, 0, 0.5),
-        0 0 30px rgba(255, 215, 0, 0.3),
-        2px 2px 2px rgba(0, 0, 0, 0.7);
+        0 0 20px rgba(255, 215, 0, 0.5);
     animation: winningTextAnimation 2s infinite;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 15px 30px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 10px 20px;
     border-radius: 10px;
     border: 2px solid #ffd700;
-    white-space: nowrap;
+    width: 100%;
+    word-wrap: break-word;
 }
 
 @keyframes winningTextAnimation {

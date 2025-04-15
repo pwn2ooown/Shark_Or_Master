@@ -440,17 +440,18 @@ const PokerGame = () => {
         }
     };
 
-    // Helper to check if both players have the same two card values (regardless of suit)
+    // If any of one card is the same we don't want to
     const isDuplicateHand = (hand1, hand2) => {
         const values1 = hand1.map(card => card.value).sort();
         const values2 = hand2.map(card => card.value).sort();
-        return values1[0] === values2[0] && values1[1] === values2[1];
+        return values1[0] === values2[0] || values1[1] === values2[1];
     };
 
     // Helper to check if payoutMultiplier is less than 1.4 for either side
     const isLowPayout = (odds) => {
-        const masterPayout = odds.master > 0 ? 1 / odds.master : 0;
-        const sharkPayout = odds.shark > 0 ? 1 / odds.shark : 0;
+        const masterPayout = odds.masterWinProbability > 0 ? 1 / odds.masterWinProbability : Infinity;
+        const sharkPayout = odds.sharkWinProbability > 0 ? 1 / odds.sharkWinProbability : Infinity;
+        // console.log(odds);
         return masterPayout < 1.4 || sharkPayout < 1.4;
     };
 
@@ -466,12 +467,11 @@ const PokerGame = () => {
             newSideOdds = calculateSideOdds(oddsResult.handResults);
             tries++;
             // Prevent infinite loop in rare case (should never happen in practice)
-            if (tries > 20) break;
+            if (tries > 30){ alert("Cannot find good game"); break;}
         } while (
             isDuplicateHand(newMasterCards, newSharkCards) ||
             isLowPayout(oddsResult)
         );
-
         setDeck(newDeck);
         setMasterCards(newMasterCards);
         setSharkCards(newSharkCards);
@@ -848,12 +848,11 @@ const PokerGame = () => {
         if (result > 0) { // Master wins
             setWinner('master');
             updateWinHistory('master');
-            resultText = `Master wins with ${getHandName(masterRank)}!`;
             if (playerBet === 'master') {
-                const payoutMultiplier = odds.master > 0 ? Math.round((1 / odds.master) * 100) / 100 : 1;
-                // Apply rake to winnings
+                const payoutMultiplier = odds.master > 0 ? (1 / odds.master) : 1;
                 winAmount = Math.floor(masterBet * payoutMultiplier * RAKE);
-                resultText += ` You win $${winAmount} on main bet! (5% rake applied)`;
+                // console.log(masterBet,payoutMultiplier);
+                resultText += `+ $${winAmount}`;
                 setPlayerWon(true);
             } else if (playerBet === 'shark') {
                 resultText += ' You lose your main bet.';
@@ -862,12 +861,10 @@ const PokerGame = () => {
         } else if (result < 0) { // Shark wins
             setWinner('shark');
             updateWinHistory('shark');
-            resultText = `Shark wins with ${getHandName(sharkRank)}!`;
             if (playerBet === 'shark') {
-                const payoutMultiplier = odds.shark > 0 ? Math.round((1 / odds.shark) * 100) / 100 : 1;
-                // Apply rake to winnings
+                const payoutMultiplier = odds.shark > 0 ? (1 / odds.shark) : 1;
                 winAmount = Math.floor(sharkBet * payoutMultiplier * RAKE);
-                resultText += ` You win $${winAmount} on main bet! (5% rake applied)`;
+                resultText += `+ $${winAmount}`;
                 setPlayerWon(true);
             } else if (playerBet === 'master') {
                 resultText += ' You lose your main bet.';
@@ -1279,10 +1276,10 @@ const PokerGame = () => {
                 </>
             )}
             
-            {playerWon && winnings > 0 && gameState === 'result' && (
+            {playerWon && gameState === 'result' && (
                 <div className="winning-message-container">
                     <div className="winning-message">
-                        You Win ${winnings}!
+                        {gameResult}
                     </div>
                 </div>
             )}
