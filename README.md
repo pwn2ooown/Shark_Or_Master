@@ -1,5 +1,7 @@
 # Shark or Master 鯊魚大師
 
+![](static/cardback.png)
+
 Pure frontend implementation of the Poker Master game from WPT Global.
 
 純前端的單機版鯊魚大師 (WPT Global 裡面的一款遊戲)
