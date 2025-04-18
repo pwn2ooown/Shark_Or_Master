@@ -428,39 +428,45 @@ const PokerGame = () => {
         }, {});
     };
 
-    const getNextPosition = (prevWinner) => {
-        // Find the last entry in current column if exists
-        const currentColumn = winHistory.filter(item => item.x === currentX);
-        const nextY = currentColumn.length;
-        
-        // If column is full or winner changed, move to next column
-        if (nextY >= 10 || (prevWinner !== null && prevWinner !== winner)) {
+    const getNextPosition = (prevWinner, newWinner) => {
+        // If this is a new winner or first entry, start a new column
+        if (prevWinner !== newWinner || winHistory.length === 0) {
+            // Find the next empty column
+            const maxX = winHistory.length > 0 ? Math.max(...winHistory.map(item => item.x)) : -1;
             return {
-                x: currentX + 1,
+                x: maxX + 1,
                 y: 0
             };
         }
         
-        // Stay in same column, next row
+        // Continue in the same column - find last entry with same winner
+        const currentEntries = winHistory.filter(item => item.winner === newWinner);
+        const lastEntry = currentEntries[currentEntries.length - 1];
+        
+        // If column is full (10 entries), start a new column
+        if (lastEntry.y >= 9) {
+            return {
+                x: lastEntry.x + 1,
+                y: 0
+            };
+        }
+        
+        // Continue in same column, next row
         return {
-            x: currentX,
-            y: nextY
+            x: lastEntry.x,
+            y: lastEntry.y + 1
         };
     };
 
     const updateWinHistory = (winner) => {
         const prevWinner = winHistory.length > 0 ? winHistory[winHistory.length - 1].winner : null;
-        const pos = getNextPosition(prevWinner);
+        const pos = getNextPosition(prevWinner, winner);
         
         setWinHistory(prev => [...prev, { winner, x: pos.x, y: pos.y }]);
-        setCurrentX(pos.x);
-        setCurrentY(pos.y);
-
-        // Reset to first column if we reach the end
+    
+        // Reset history if we reach the end (20 columns)
         if (pos.x >= 20) {
-            setWinHistory([]);
-            setCurrentX(0);
-            setCurrentY(0);
+            setWinHistory([{ winner, x: 0, y: 0 }]);
         }
     };
 
@@ -856,25 +862,34 @@ const PokerGame = () => {
         if (result > 0) { // Master wins
             setWinner('master');
             updateWinHistory('master');
-            if (playerBet === 'master') {
+            
+            // Calculate main bet winnings - pay BOTH sides if bet on winner
+            if (masterBet > 0) { // If player bet on master, they win
                 const payoutMultiplier = odds.master > 0 ? (1 / odds.master) : 1;
                 mainWinAmount = Math.floor(masterBet * payoutMultiplier * RAKE);
                 totalWinnings += mainWinAmount;
+                setPlayerWon(true);
             }
         } else if (result < 0) { // Shark wins
             setWinner('shark');
             updateWinHistory('shark');
-            if (playerBet === 'shark') {
+            
+            // Calculate main bet winnings - pay BOTH sides if bet on winner
+            if (sharkBet > 0) { // If player bet on shark, they win
                 const payoutMultiplier = odds.shark > 0 ? (1 / odds.shark) : 1;
                 mainWinAmount = Math.floor(sharkBet * payoutMultiplier * RAKE);
                 totalWinnings += mainWinAmount;
+                setPlayerWon(true);
             }
         } else { // Tie
             setWinner('tie');
             updateWinHistory('tie');
-            if (playerBet) {
-                mainWinAmount = masterBet + sharkBet;
-                totalWinnings += mainWinAmount;
+            
+            // Return all main bets in a tie
+            mainWinAmount = masterBet + sharkBet;
+            totalWinnings += mainWinAmount;
+            if (mainWinAmount > 0) {
+                setPlayerWon(true);
             }
         }
 
@@ -1114,9 +1129,9 @@ const PokerGame = () => {
                             <p className="odds-display">× {odds.master > 0 ? (1 / odds.master).toFixed(2) : 'N/A'}</p>
                         </div>
                     )}
-                    {gameState === 'result' && playerBet === 'master' && winner === 'master' && (
+                    {gameState === 'result' && winner === 'master' && masterBet > 0 && (
                         <div className="player-bet-info">
-                            <p className="winning-amount">+ ${winnings}</p>
+                            <p className="winning-amount">+ ${Math.floor(masterBet * (1/odds.master) * RAKE)}</p>
                         </div>
                     )}
                 </div>
@@ -1187,9 +1202,9 @@ const PokerGame = () => {
                             <p className="odds-display">× {odds.shark > 0 ? (1 / odds.shark).toFixed(2) : 'N/A'}</p>
                         </div>
                     )}
-                    {gameState === 'result' && playerBet === 'shark' && winner === 'shark' && (
+                    {gameState === 'result' && winner === 'shark' && sharkBet > 0 && (
                         <div className="player-bet-info">
-                            <p className="winning-amount">+ ${winnings}</p>
+                            <p className="winning-amount">+ ${Math.floor(sharkBet * (1/odds.shark) * RAKE)}</p>
                         </div>
                     )}
                 </div>
