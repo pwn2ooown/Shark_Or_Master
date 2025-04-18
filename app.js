@@ -1341,8 +1341,8 @@ const PokerGame = () => {
             <div className="disclaimer-container">
                 <div className="disclaimer">
                     For entertainment purposes only.
-                    All money and bets in this game are virtual and have no real-world value.
-                    Please gamble responsibly.
+                    All money in this game are virtual and have no real-world value.
+                    Please play responsibly.
                     <span className="rake-note">A 5% rake is taken from all winnings.</span>
                 </div>
             </div>
