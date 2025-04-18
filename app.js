@@ -1088,7 +1088,7 @@ const PokerGame = () => {
         <div className="game-container">
             <div className="header">
                 <h1>Shark or Master</h1>
-                <span className="source-note">Source code is at <a href="https://github.com/pwn2ooown/Shark_Or_Master" target="_blank">GitHub</a>. If you have any problems, just open an issue.</span>
+                <span className="source-note"><a href="https://github.com/pwn2ooown/Shark_Or_Master" target="_blank">Source Code</a>. If you have any problem, just open an issue.</span>
             </div>
             
             <div className="game-layout">
