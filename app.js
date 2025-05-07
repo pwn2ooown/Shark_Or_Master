@@ -97,7 +97,14 @@ const getRank = (hand) => {
     const values = cards.map(card => card.value);
     
     // Check for flush
-    const isFlush = Object.values(suitCounts).some(count => count >= 5);
+    let flushSuit = null;
+    for (const suit in suitCounts) {
+        if (suitCounts[suit] >= 5) {
+            flushSuit = suit;
+            break;
+        }
+    }
+    const isFlush = !!flushSuit;
     
     // Check for straight
     let isStraight = false;
@@ -136,12 +143,31 @@ const getRank = (hand) => {
     
     // Royal flush
     if (isFlush && isStraight && straightHighCard === 14) {
-        return { rank: 9, value: 14 }; // Royal Flush
+        // Check if the straight is in the flush suit
+        const flushCards = cards.filter(card => card.suit === flushSuit);
+        const flushValues = flushCards.map(card => card.value);
+        const aceHighStraight = [10, 11, 12, 13, 14];
+        if (aceHighStraight.every(value => flushValues.includes(value))) {
+            return { rank: 9, value: 14, flushSuit, flushValues: aceHighStraight };
+        }
     }
     
     // Straight flush
     if (isFlush && isStraight) {
-        return { rank: 8, value: straightHighCard }; // Straight Flush
+        // Check if the straight is in the flush suit
+        const flushCards = cards.filter(card => card.suit === flushSuit);
+        const flushValues = flushCards.map(card => card.value);
+        // Check for Ace-low straight flush
+        if (straightHighCard === 5 && [14, 2, 3, 4, 5].every(v => flushValues.includes(v))) {
+            return { rank: 8, value: 5, flushSuit, flushValues: [5, 4, 3, 2, 14] };
+        }
+        // Check for normal straight flush
+        for (let i = flushValues.length - 1; i >= 4; i--) {
+            const straightSlice = flushValues.slice(i - 4, i + 1);
+            if (straightSlice[0] - straightSlice[4] === 4) {
+                return { rank: 8, value: straightSlice[0], flushSuit, flushValues: straightSlice };
+            }
+        }
     }
     
     // Four of a kind
@@ -164,9 +190,12 @@ const getRank = (hand) => {
     
     // Flush
     if (isFlush) {
+        const flushCards = cards.filter(card => card.suit === flushSuit).sort((a, b) => b.value - a.value);
+        const flushValues = flushCards.slice(0, 5).map(card => card.value);
         return { 
             rank: 5, 
-            values: values.slice(0, 5) // Keep top 5 cards for comparison
+            values: flushValues,
+            flushSuit
         };
     }
     
@@ -269,6 +298,12 @@ const compareHands = (hand1, hand2) => {
             return rank1.kicker - rank2.kicker;
         
         case 5: // Flush
+            for (let i = 0; i < 5; i++) {
+                if (rank1.values[i] !== rank2.values[i]) {
+                    return rank1.values[i] - rank2.values[i];
+                }
+            }
+            return 0;
         case 0: // High card
             for (let i = 0; i < rank1.values.length; i++) {
                 if (rank1.values[i] !== rank2.values[i]) {
@@ -356,6 +391,154 @@ const SIDE_BETS = {
 // Add rake constant - house takes 5% of winnings
 const RAKE = 0.95;
 
+// RealCard component for realistic poker card rendering
+const SUIT_SYMBOLS = {
+    spades: '♠',
+    hearts: '♥',
+    diamonds: '♦',
+    clubs: '♣',
+};
+const SUIT_COLORS = {
+    spades: '#222',
+    clubs: '#222',
+    hearts: '#d22',
+    diamonds: '#d22',
+};
+const PIP_LAYOUTS = {
+    '2': [[1],[1]],
+    '3': [[1],[1],[1]],
+    '4': [[2],[2]],
+    '5': [[2],[1],[2]],
+    '6': [[2],[2],[2]],
+    '7': [[2],[1],[2],[2]],
+    '8': [[2],[1],[2],[1],[2]],
+    '9': [[2],[2],[1],[2],[2]],
+    '10': [[2],[1],[2],[2],[1],[2]],
+};
+const RealCard = ({ value, suit, size = 200, hideCorners = false }) => {
+    const isFace = ['J','Q','K','A'].includes(value);
+    const pipColor = SUIT_COLORS[suit] || '#222';
+    const suitSymbol = SUIT_SYMBOLS[suit] || '?';
+    const pipLayout = PIP_LAYOUTS[value];
+    // Make pip font size even smaller for all cards
+    const pipFontSize = (value === '9' || value === '10') ? size * 0.2 : size * 0.24;
+    // For pip rows, distribute from top to bottom
+    let pipRows = [];
+    if (!isFace && pipLayout) {
+        const nRows = pipLayout.length;
+        for (let i = 0; i < nRows; ++i) {
+            // Distribute rows from 8% to 92% of card height
+            const top = 0.1 + (i / (nRows - 1)) * 0.8;
+            const nPips = pipLayout[i][0] + (pipLayout[i][1] || 0);
+            let justify = 'center';
+            let padding = 0;
+            if (nPips === 2) {
+                justify = 'space-between';
+                padding = size * 0.2; // balanced padding
+            }
+            pipRows.push({
+                row: pipLayout[i],
+                style: {
+                    position: 'absolute',
+                    top: `${top * 100}%`,
+                    left: 0,
+                    width: '100%',
+                    display: 'flex',
+                    justifyContent: justify,
+                    alignItems: 'center',
+                    pointerEvents: 'none',
+                    transform: 'translateY(-50%)',
+                    paddingLeft: nPips === 2 ? padding : 0,
+                    paddingRight: nPips === 2 ? padding : 0,
+                }
+            });
+        }
+    }
+    // Face card icons
+    const faceIcons = { J: '🥷', Q: '👸', K: '🫅' };
+    return (
+        <div style={{
+            width: size,
+            height: size * 1.5,
+            background: 'white',
+            borderRadius: 15,
+            boxShadow: '0 0 30px rgba(0,0,0,0.2)',
+            border: '2px solid #bbb',
+            position: 'relative',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+        }}>
+            {/* Top left value/suit */}
+            {!hideCorners && (
+                <div style={{
+                    position: 'absolute',
+                    top: 6,
+                    left: 8,
+                    color: pipColor,
+                    fontWeight: 'bold',
+                    fontSize: size * 0.16,
+                    textAlign: 'left',
+                    lineHeight: 1.1,
+                }}>
+                    {value}<br/>{suitSymbol}
+                </div>
+            )}
+            {/* Bottom right value/suit (rotated) */}
+            {!hideCorners && (
+                <div style={{
+                    position: 'absolute',
+                    bottom: 6,
+                    right: 8,
+                    color: pipColor,
+                    fontWeight: 'bold',
+                    fontSize: size * 0.16,
+                    textAlign: 'right',
+                    lineHeight: 1.1,
+                    transform: 'rotate(180deg)',
+                }}>
+                    {value}<br/>{suitSymbol}
+                </div>
+            )}
+            {/* Center: pips or face */}
+            <div style={{
+                width: '100%',
+                height: '100%',
+                position: 'relative',
+                color: pipColor,
+                fontSize: pipFontSize,
+                padding: 0,
+            }}>
+                {isFace ? (
+                    <div style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}>
+                        <span style={{fontSize: size * 0.7, fontWeight: 'bold'}}>
+                            {value === 'A' ? suitSymbol : faceIcons[value]}
+                        </span>
+                    </div>
+                ) : (
+                    pipRows.map((rowObj, i) => (
+                        <div key={i} style={rowObj.style}>
+                            {Array(rowObj.row[0]).fill(0).map((_, j) => (
+                                <span key={j}>{suitSymbol}</span>
+                            ))}
+                            {rowObj.row[1] && Array(rowObj.row[1]).fill(0).map((_, j) => (
+                                <span key={j+10}>{suitSymbol}</span>
+                            ))}
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+};
+
 // Main Game Component
 const PokerGame = () => {
     const [gameState, setGameState] = React.useState('betting'); // betting, dealing, result
@@ -401,8 +584,12 @@ const PokerGame = () => {
     const [winningCardIndices, setWinningCardIndices] = React.useState([]);
     const [playerWon, setPlayerWon] = React.useState(false);
     const [isBettingLocked, setIsBettingLocked] = React.useState(false);
-    const [revealProgress, setRevealProgress] = React.useState(0);
-    const [swipeInfo, setSwipeInfo] = React.useState({ startX: null, currentX: null });
+    const [dragOffset, setDragOffset] = React.useState({x: 0, y: 0});
+    const [isDragging, setIsDragging] = React.useState(false);
+    const dragThreshold = 120; // px
+    const [gameId, setGameId] = React.useState(0); // Unique id for each game
+    const timeoutsRef = React.useRef([]); // Store all timeouts
+    const dealButtonRef = React.useRef(); // Add ref for Deal The Cards button
 
     const calculateSideOdds = (results) => {
         const totalHands = results.length;
@@ -470,7 +657,16 @@ const PokerGame = () => {
         }
     };
 
+    const clearAllTimeouts = () => {
+        timeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+        timeoutsRef.current = [];
+    };
+
     const startNewGame = () => {
+        console.log('startNewGame called');
+        clearAllTimeouts(); // Clear all pending timeouts
+        setGameId(prev => prev + 1); // Increment gameId for new game
+        // Remove any artificial delay: immediately reset state
         let newDeck, newMasterCards, newSharkCards, newCommunityCards, oddsResult, newSideOdds;
         let tries = 0;
         do {
@@ -481,7 +677,6 @@ const PokerGame = () => {
             oddsResult = simulateWinProbability(newMasterCards, newSharkCards, [], 10000);
             newSideOdds = calculateSideOdds(oddsResult.handResults);
             tries++;
-            // Prevent infinite loop in rare case (should never happen in practice)
             if (tries > 30){ alert("Cannot find good game"); break;}
         } while (
             isLowPayout(oddsResult) || isDuplicateHand(newMasterCards, newSharkCards)
@@ -518,15 +713,16 @@ const PokerGame = () => {
             tie: oddsResult.tieProbability
         });
         setSideOdds(newSideOdds);
-
         if (winHistory.length > 100) {
             setWinHistory(prev => prev.slice(-100));
         }
         setIsBettingLocked(false);
+        setDragOffset({x: 0, y: 0}); // Reset drag offset for reveal
     };
     
     // Load saved data from localStorage on initial render
     React.useEffect(() => {
+        console.log('PokerGame initial mount, loading saved data');
         const savedData = localStorage.getItem('sharkMasterGameData');
         if (savedData) {
             try {
@@ -678,156 +874,45 @@ const PokerGame = () => {
         });
     };
 
-    const showFinalCardReveal = () => {
+    const showFinalCardReveal = (thisGameId) => {
         setShowFinalCard(true);
-        setRevealProgress(0);
-        // Start 5 second timer for auto-reveal
-        const timer = setTimeout(() => {
-            if (!finalCardFlipped) {
-                handleFinalCardFlip();
-            }
-        }, 5000);
-        setAutoRevealTimer(timer);
+        setFinalCardFlipped(false);
+        setDragOffset({x: 0, y: 0});
     };
 
-    const handleFinalCardFlip = () => {
-        // Clear auto-reveal timer
-        if (autoRevealTimer) {
-            clearTimeout(autoRevealTimer);
-            setAutoRevealTimer(null);
-        }
+    const handleFinalCardFlip = (thisGameId) => {
+        clearAllTimeouts();
         setFinalCardFlipped(true);
-        setRevealProgress(100);
         setTimeout(() => {
+            if (gameId !== thisGameId) return;
             setShowFinalCard(false);
             setFinalCardFlipped(false);
-            setRevealProgress(0);
             calculateWinner();
-        }, 1500);
+        }, 600); // Reduced delay after reveal
     };
 
-    // Add a simple click handler for the final card
-    const handleCardClick = () => {
-        if (!finalCardFlipped) {
-            handleFinalCardFlip();
-        }
-    };
-
-    const handleTouchStart = (e) => {
-        setSwipeInfo({
-            startX: e.touches[0].clientX,
-            currentX: e.touches[0].clientX
-        });
-    };
-
-    const handleTouchMove = (e) => {
-        if (!swipeInfo.startX) return;
-        
-        const touchX = e.touches[0].clientX;
-        setSwipeInfo(prev => ({ ...prev, currentX: touchX }));
-        
-        // Calculate reveal progress based on swipe distance
-        const cardWidth = 200; // Width of the card
-        const maxSwipeDistance = cardWidth; // Reduced distance needed for full reveal
-        const swipeDistance = swipeInfo.startX - touchX;
-        
-        if (swipeDistance > 0) { // Only process left swipes
-            // Ensure progress is between 0 and 100
-            const progress = Math.min(100, Math.max(0, (swipeDistance / maxSwipeDistance) * 100));
-            setRevealProgress(progress);
-            
-            // Auto-flip when revealing more than 50%
-            if (progress > 50 && !finalCardFlipped) {
-                handleFinalCardFlip();
-            }
-        }
-    };
-
-    const handleTouchEnd = () => {
-        if (revealProgress < 50 && !finalCardFlipped) {
-            // Reset to hidden if not revealed enough
-            setRevealProgress(0);
-        }
-        setSwipeInfo({ startX: null, currentX: null });
-    };
-
-    const handleMouseDown = (e) => {
-        setSwipeInfo({
-            startX: e.clientX,
-            currentX: e.clientX
-        });
-    };
-
-    const handleMouseMove = (e) => {
-        if (!swipeInfo.startX) return;
-        
-        setSwipeInfo(prev => ({ ...prev, currentX: e.clientX }));
-        
-        // Calculate reveal progress based on swipe distance
-        const cardWidth = 200; // Width of the card
-        const maxSwipeDistance = cardWidth; // Reduced distance needed for full reveal
-        const swipeDistance = swipeInfo.startX - e.clientX;
-        
-        if (swipeDistance > 0) { // Only process left swipes
-            // Ensure progress is between 0 and 100
-            const progress = Math.min(100, Math.max(0, (swipeDistance / maxSwipeDistance) * 100));
-            setRevealProgress(progress);
-            
-            // Auto-flip when revealing more than 50%
-            if (progress > 50 && !finalCardFlipped) {
-                handleFinalCardFlip();
-            }
-        }
-    };
-
-    const handleMouseUp = () => {
-        if (revealProgress < 50 && !finalCardFlipped) {
-            // Reset to hidden if not revealed enough
-            setRevealProgress(0);
-        }
-        setSwipeInfo({ startX: null, currentX: null });
-    };
-
-    const startRound = () => {
-        // Check if there's at least one bet placed (either main bet or side bet)
-        const totalBets = masterBet + sharkBet + Object.values(sideBets).reduce((sum, bet) => sum + bet, 0);
-        
-        if (totalBets === 0) {
-            console.log('Please place at least one bet');
+    const startRound = (event) => {
+        console.log('startRound called', event, { gameState, isBettingLocked });
+        if (gameState !== 'betting' || isBettingLocked) {
+            console.log('startRound blocked by guard', { gameState, isBettingLocked });
             return;
         }
-        
-        // Save current bets as previous bets
-        setPreviousBets({
-            master: masterBet,
-            shark: sharkBet,
-            sideBets: {...sideBets}
-        });
-        
-        // Determine main bet (if both main bets are 0 but side bets exist)
-        if (masterBet === 0 && sharkBet === 0) {
-            // Set a default player bet when only side bets are placed
-            setPlayerBet(Math.random() > 0.5 ? 'master' : 'shark');
-        } else {
-            setPlayerBet(masterBet > sharkBet ? 'master' : 'shark');
-        }
-        
         setGameState('dealing');
-        
-        // Lock betting when round starts
         setIsBettingLocked(true);
-        
-        // Deal first three cards (flop) immediately
         setRevealedCommunityCards(3);
-        
-        // After 1 second, deal turn
-        setTimeout(() => {
+        const thisGameId = gameId;
+        // Deal turn after 1 second (slightly increased delay)
+        const t1 = setTimeout(() => {
+            if (gameId !== thisGameId) return;
             setRevealedCommunityCards(4);
-            // After another second, show final card reveal
-            setTimeout(() => {
-                showFinalCardReveal();
+            // Show final card reveal after another 0.6 second (slightly increased delay)
+            const t2 = setTimeout(() => {
+                if (gameId !== thisGameId) return;
+                showFinalCardReveal(thisGameId);
             }, 1000);
+            timeoutsRef.current.push(t2);
         }, 1000);
+        timeoutsRef.current.push(t1);
     };
 
     const calculateWinner = () => {
@@ -1084,11 +1169,32 @@ const PokerGame = () => {
         };
     }, [gameState]);
     
+    // Add global listeners to always end drag
+    React.useEffect(() => {
+        const handleUp = () => setIsDragging(false);
+        window.addEventListener('mouseup', handleUp);
+        window.addEventListener('touchend', handleUp);
+        return () => {
+            window.removeEventListener('mouseup', handleUp);
+            window.removeEventListener('touchend', handleUp);
+        };
+    }, []);
+    
+    React.useEffect(() => {
+        console.log('PokerGame rendered', { gameState, isBettingLocked });
+    });
+    React.useEffect(() => {
+        console.log('gameState changed:', gameState);
+    }, [gameState]);
+    React.useEffect(() => {
+        console.log('isBettingLocked changed:', isBettingLocked);
+    }, [isBettingLocked]);
+    
     return (
         <div className="game-container">
             <div className="header">
                 <h1>Shark or Master</h1>
-                <span className="source-note"><a href="https://github.com/pwn2ooown/Shark_Or_Master" target="_blank">Source Code</a>. If you have any problem, just open an issue.</span>
+                <span className="source-note"><a href="https://github.com/pwn2ooown/Shark_Or_Master" target="_blank">Source Code</a>. If you have any problems, just open an issue.</span>
             </div>
             
             <div className="game-layout">
@@ -1112,7 +1218,7 @@ const PokerGame = () => {
                                 }
                                 return (
                                     <Card 
-                                        key={`master-${index}`} 
+                                        key={`master-${card.suit}-${card.value}-${index}`}
                                         card={card} 
                                         hidden={!cardsRevealed && gameState !== 'result'} 
                                         className="card-reveal-animation"
@@ -1149,7 +1255,7 @@ const PokerGame = () => {
                                 }
                                 return (
                                     <Card 
-                                        key={`community-${index}`} 
+                                        key={`community-${card.suit}-${card.value}-${index}`}
                                         card={card} 
                                         hidden={false} 
                                         className="card-reveal-animation"
@@ -1185,7 +1291,7 @@ const PokerGame = () => {
                                 }
                                 return (
                                     <Card 
-                                        key={`shark-${index}`} 
+                                        key={`shark-${card.suit}-${card.value}-${index}`}
                                         card={card} 
                                         hidden={!cardsRevealed && gameState !== 'result'} 
                                         className="card-reveal-animation"
@@ -1299,7 +1405,17 @@ const PokerGame = () => {
                                     >
                                         Repeat Last Bet
                                     </button>
-                                    <button className="start-game" onClick={startRound}>
+                                    <button 
+                                        ref={dealButtonRef} 
+                                        className="start-game" 
+                                        onClick={e => {
+                                            console.log('Deal The Cards button clicked', e);
+                                            startRound(e);
+                                        }} 
+                                        disabled={isBettingLocked}
+                                        onFocus={() => console.log('Deal The Cards button focused')}
+                                        onBlur={() => console.log('Deal The Cards button blurred')}
+                                    >
                                         {isBettingLocked ? "Dealing..." : "Deal The Cards"}
                                     </button>
                                     <button 
@@ -1377,28 +1493,93 @@ const PokerGame = () => {
             
             {showFinalCard && (
                 <div className="final-card-container">
-                    <div className="swipe-instruction">← Swipe or click to reveal</div>
-                    <div 
-                        className={`final-card ${finalCardFlipped ? 'flipped' : ''}`}
-                        onTouchStart={handleTouchStart}
-                        onTouchMove={handleTouchMove}
-                        onTouchEnd={handleTouchEnd}
-                        onMouseDown={handleMouseDown}
-                        onMouseMove={handleMouseMove}
-                        onMouseUp={handleMouseUp}
-                        onMouseLeave={handleMouseUp}
-                        onClick={handleCardClick}
-                        style={{ transform: finalCardFlipped ? 'rotateY(180deg)' : `rotateY(${revealProgress * 1.8}deg)` }}
-                    >
-                        <div className="final-card-front">
-                            <Card 
-                                card={communityCards[4]} 
-                                hidden={false} 
-                                className="big-final-card"
+                    <div style={{ position: 'relative', width: 200, height: 300 }}>
+                        {/* Bottom card: the real final card */}
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: 200,
+                                height: 300,
+                                zIndex: 1,
+                            }}
+                        >
+                            {communityCards[4] && (
+                              <RealCard
+                                value={communityCards[4].value}
+                                suit={communityCards[4].suit}
+                                size={200}
+                                hideCorners={!finalCardFlipped}
+                              />
+                            )}
+                        </div>
+                        {/* Top card: card back, draggable */}
+                        {!finalCardFlipped && (
+                            <div
+                                className="final-card-back"
+                                style={{
+                                    position: 'absolute',
+                                    top: dragOffset.y || 0,
+                                    left: dragOffset.x || 0,
+                                    width: 200,
+                                    height: 300,
+                                    zIndex: 2,
+                                    backgroundImage: "url('static/cardback.png')",
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                    borderRadius: 15,
+                                    boxShadow: '0 0 30px rgba(255,255,255,0.3)',
+                                    cursor: isDragging ? 'grabbing' : 'grab',
+                                    transition: isDragging ? 'none' : 'top 0.3s, left 0.3s',
+                                }}
+                                onMouseDown={e => {
+                                    setIsDragging(true);
+                                    setDragOffset({ x: 0, y: 0 });
+                                    window._dragStart = { x: e.clientX, y: e.clientY };
+                                }}
+                                onMouseMove={e => {
+                                    if (!isDragging || !window._dragStart) return;
+                                    const dx = e.clientX - window._dragStart.x;
+                                    const dy = e.clientY - window._dragStart.y;
+                                    setDragOffset({ x: dx, y: dy });
+                                    // Reveal if card is dragged far enough (e.g., 120px in any direction)
+                                    if (Math.abs(dx) > 120 || Math.abs(dy) > 180) {
+                                        setIsDragging(false);
+                                        handleFinalCardFlip(gameId);
+                                    }
+                                }}
+                                onMouseUp={e => {
+                                    setIsDragging(false);
+                                    window._dragStart = null;
+                                }}
+                                onMouseLeave={e => {
+                                    setIsDragging(false);
+                                    window._dragStart = null;
+                                }}
+                                onTouchStart={e => {
+                                    setIsDragging(true);
+                                    setDragOffset({ x: 0, y: 0 });
+                                    if (e.touches && e.touches[0]) {
+                                        window._dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                                    }
+                                }}
+                                onTouchMove={e => {
+                                    if (!isDragging || !window._dragStart || !e.touches[0]) return;
+                                    const dx = e.touches[0].clientX - window._dragStart.x;
+                                    const dy = e.touches[0].clientY - window._dragStart.y;
+                                    setDragOffset({ x: dx, y: dy });
+                                    if (Math.abs(dx) > 120 || Math.abs(dy) > 180) {
+                                        setIsDragging(false);
+                                        handleFinalCardFlip(gameId);
+                                    }
+                                }}
+                                onTouchEnd={e => {
+                                    setIsDragging(false);
+                                    window._dragStart = null;
+                                }}
                             />
-                        </div>
-                        <div className="final-card-back">
-                        </div>
+                        )}
                     </div>
                 </div>
             )}
