@@ -41,20 +41,22 @@ const isLowPayout = (odds) => {
 // Card display component
 const Card = ({ card, hidden, className = "", highlight = false, greyed = false }) => {
     if (hidden) {
-        return <div className={`card hidden ${className}`}>?</div>;
+        return <div className={`card hidden ${className}`}></div>;
     }
-    
+
     let displayValue = card.value;
     let displaySuit = '';
-    
+
     if (card.suit === 'hearts') displaySuit = '♥';
     else if (card.suit === 'diamonds') displaySuit = '♦';
     else if (card.suit === 'clubs') displaySuit = '♣';
     else if (card.suit === 'spades') displaySuit = '♠';
-    
+
     return (
         <div className={`card ${card.suit} ${className} ${highlight ? 'winning-card' : ''} ${greyed ? 'greyed-card' : ''}`}>
-            {displayValue}{displaySuit}
+            <span className="card-index">{displayValue}<em>{displaySuit}</em></span>
+            <span className="card-pip">{displaySuit}</span>
+            <span className="card-index card-index-bottom">{displayValue}<em>{displaySuit}</em></span>
         </div>
     );
 };
@@ -586,6 +588,7 @@ const PokerGame = () => {
     const [isBettingLocked, setIsBettingLocked] = React.useState(false);
     const [dragOffset, setDragOffset] = React.useState({x: 0, y: 0});
     const [isDragging, setIsDragging] = React.useState(false);
+    const [flipDirection, setFlipDirection] = React.useState(1); // which way the final card turns over
     const dragThreshold = 120; // px
     const [gameId, setGameId] = React.useState(0); // Unique id for each game
     const timeoutsRef = React.useRef([]); // Store all timeouts
@@ -888,7 +891,7 @@ const PokerGame = () => {
             setShowFinalCard(false);
             setFinalCardFlipped(false);
             calculateWinner();
-        }, 600); // Reduced delay after reveal
+        }, 1400); // Let the 3D turn finish (~650ms) and the card be seen before closing
     };
 
     const startRound = (event) => {
@@ -1492,95 +1495,98 @@ const PokerGame = () => {
             )}
             
             {showFinalCard && (
-                <div className="final-card-container">
-                    <div style={{ position: 'relative', width: 200, height: 300 }}>
-                        {/* Bottom card: the real final card */}
+                /* Move/release handlers live on the full-screen overlay: while the card
+                   turns, its projected hit area shrinks and the pointer escapes it. */
+                <div
+                    className="final-card-container"
+                    onMouseMove={e => {
+                        if (finalCardFlipped || !isDragging || !window._dragStart) return;
+                        const dx = e.clientX - window._dragStart.x;
+                        setDragOffset({ x: dx, y: 0 });
+                        // Past edge-on (90°) the turn commits and finishes on its own
+                        if (Math.abs(dx) * 0.9 >= 90) {
+                            setIsDragging(false);
+                            window._dragStart = null;
+                            setFlipDirection(dx < 0 ? -1 : 1);
+                            handleFinalCardFlip(gameId);
+                        }
+                    }}
+                    onMouseUp={e => {
+                        if (finalCardFlipped || !isDragging) return;
+                        setIsDragging(false);
+                        window._dragStart = null;
+                        if (Math.abs(dragOffset.x) < 8) {
+                            // A simple tap turns the card over too
+                            setFlipDirection(1);
+                            handleFinalCardFlip(gameId);
+                        } else {
+                            setDragOffset({ x: 0, y: 0 });
+                        }
+                    }}
+                    onMouseLeave={e => {
+                        if (finalCardFlipped || !isDragging) return;
+                        setIsDragging(false);
+                        window._dragStart = null;
+                        setDragOffset({ x: 0, y: 0 });
+                    }}
+                    onTouchMove={e => {
+                        if (finalCardFlipped || !isDragging || !window._dragStart || !e.touches[0]) return;
+                        const dx = e.touches[0].clientX - window._dragStart.x;
+                        setDragOffset({ x: dx, y: 0 });
+                        if (Math.abs(dx) * 0.9 >= 90) {
+                            setIsDragging(false);
+                            window._dragStart = null;
+                            setFlipDirection(dx < 0 ? -1 : 1);
+                            handleFinalCardFlip(gameId);
+                        }
+                    }}
+                    onTouchEnd={e => {
+                        if (finalCardFlipped || !isDragging) return;
+                        setIsDragging(false);
+                        window._dragStart = null;
+                        if (Math.abs(dragOffset.x) < 8) {
+                            setFlipDirection(1);
+                            handleFinalCardFlip(gameId);
+                        } else {
+                            setDragOffset({ x: 0, y: 0 });
+                        }
+                    }}
+                >
+                    <div className="final-card-stage">
                         <div
+                            className={`final-card-flipper ${finalCardFlipped ? 'flipped' : ''}`}
                             style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: 200,
-                                height: 300,
-                                zIndex: 1,
+                                transform: finalCardFlipped
+                                    ? `rotateY(${flipDirection * 180}deg)`
+                                    : `rotateY(${Math.max(-180, Math.min(180, dragOffset.x * 0.9))}deg)`,
+                                transition: isDragging ? 'none' : 'transform 0.65s cubic-bezier(0.2, 0.7, 0.25, 1)',
+                            }}
+                            onMouseDown={e => {
+                                if (finalCardFlipped) return;
+                                setIsDragging(true);
+                                setDragOffset({ x: 0, y: 0 });
+                                window._dragStart = { x: e.clientX };
+                            }}
+                            onTouchStart={e => {
+                                if (finalCardFlipped || !e.touches[0]) return;
+                                setIsDragging(true);
+                                setDragOffset({ x: 0, y: 0 });
+                                window._dragStart = { x: e.touches[0].clientX };
                             }}
                         >
-                            {communityCards[4] && (
-                              <RealCard
-                                value={communityCards[4].value}
-                                suit={communityCards[4].suit}
-                                size={200}
-                                hideCorners={!finalCardFlipped}
-                              />
-                            )}
+                            <div className="final-card-face final-card-backside"></div>
+                            <div className="final-card-face final-card-front">
+                                {communityCards[4] && (
+                                    <RealCard
+                                        value={communityCards[4].value}
+                                        suit={communityCards[4].suit}
+                                        size={200}
+                                    />
+                                )}
+                            </div>
                         </div>
-                        {/* Top card: card back, draggable */}
-                        {!finalCardFlipped && (
-                            <div
-                                className="final-card-back"
-                                style={{
-                                    position: 'absolute',
-                                    top: dragOffset.y || 0,
-                                    left: dragOffset.x || 0,
-                                    width: 200,
-                                    height: 300,
-                                    zIndex: 2,
-                                    backgroundImage: "url('static/cardback.png')",
-                                    backgroundSize: 'cover',
-                                    backgroundPosition: 'center',
-                                    borderRadius: 15,
-                                    boxShadow: '0 0 30px rgba(255,255,255,0.3)',
-                                    cursor: isDragging ? 'grabbing' : 'grab',
-                                    transition: isDragging ? 'none' : 'top 0.3s, left 0.3s',
-                                }}
-                                onMouseDown={e => {
-                                    setIsDragging(true);
-                                    setDragOffset({ x: 0, y: 0 });
-                                    window._dragStart = { x: e.clientX, y: e.clientY };
-                                }}
-                                onMouseMove={e => {
-                                    if (!isDragging || !window._dragStart) return;
-                                    const dx = e.clientX - window._dragStart.x;
-                                    const dy = e.clientY - window._dragStart.y;
-                                    setDragOffset({ x: dx, y: dy });
-                                    // Reveal if card is dragged far enough (e.g., 120px in any direction)
-                                    if (Math.abs(dx) > 120 || Math.abs(dy) > 180) {
-                                        setIsDragging(false);
-                                        handleFinalCardFlip(gameId);
-                                    }
-                                }}
-                                onMouseUp={e => {
-                                    setIsDragging(false);
-                                    window._dragStart = null;
-                                }}
-                                onMouseLeave={e => {
-                                    setIsDragging(false);
-                                    window._dragStart = null;
-                                }}
-                                onTouchStart={e => {
-                                    setIsDragging(true);
-                                    setDragOffset({ x: 0, y: 0 });
-                                    if (e.touches && e.touches[0]) {
-                                        window._dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-                                    }
-                                }}
-                                onTouchMove={e => {
-                                    if (!isDragging || !window._dragStart || !e.touches[0]) return;
-                                    const dx = e.touches[0].clientX - window._dragStart.x;
-                                    const dy = e.touches[0].clientY - window._dragStart.y;
-                                    setDragOffset({ x: dx, y: dy });
-                                    if (Math.abs(dx) > 120 || Math.abs(dy) > 180) {
-                                        setIsDragging(false);
-                                        handleFinalCardFlip(gameId);
-                                    }
-                                }}
-                                onTouchEnd={e => {
-                                    setIsDragging(false);
-                                    window._dragStart = null;
-                                }}
-                            />
-                        )}
                     </div>
+                    <p className={`flip-hint ${finalCardFlipped ? 'hidden-hint' : ''}`}>Drag or tap to turn the river</p>
                 </div>
             )}
             
